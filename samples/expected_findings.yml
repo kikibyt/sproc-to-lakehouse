@@ -1,8 +1,9 @@
 # Answer key for the sample corpus.
 #
 # For each procedure: the overall verdict, the exact set of rule IDs the analyzer must
-# report, and the exact subset reported at needs_review severity. Written by reading
-# each procedure, not by snapshotting tool output; tests/test_corpus.py enforces it.
+# report (with the sample DDL loaded, so the type-dependent rules EX015/EX016 run), and
+# the exact subset reported at needs_review severity. Written by reading each procedure,
+# not by snapshotting tool output; tests/test_corpus.py enforces it.
 #
 # Verdicts: auto | auto_with_note | needs_review (worst severity across findings).
 
@@ -22,20 +23,21 @@ usp_build_monthly_inventory_snapshot:
 usp_upsert_patient_enrollment:
   file: 03_usp_upsert_patient_enrollment.sql
   verdict: auto_with_note
-  rules: [DM001, EX002, EX003, EX007, EX008, EX009, EX011, ST004, ST006]
+  # is_active (BIT) set from CASE ... 1/0 (EX015); ISNULL(date, '19000101') (EX016).
+  rules: [DM001, EX002, EX003, EX007, EX008, EX009, EX011, EX015, EX016, ST004, ST006]
   needs_review: []
 
 usp_calc_refill_gaps:
   file: 04_usp_calc_refill_gaps.sql
   verdict: auto_with_note
-  rules: [DM006, EX001, EX002, EX003, EX004, EX005, EX007, EX009, ST004, ST006]
+  rules: [DM006, EX001, EX002, EX003, EX004, EX005, EX007, EX009, EX015, ST004, ST006]
   needs_review: []
 
 usp_classify_payer_claims:
   file: 05_usp_classify_payer_claims.sql
   verdict: auto_with_note
-  # Only the GETDATE() time-zone note keeps this from a clean "auto".
-  rules: [EX003, EX007, ST004, ST006]
+  # Notes only: GETDATE() time zone, and IIF(...,1,0) written into a BIT column (EX015).
+  rules: [EX003, EX007, EX015, ST004, ST006]
   needs_review: []
 
 usp_standardize_patient_contact:
@@ -48,8 +50,9 @@ usp_standardize_patient_contact:
 usp_shipment_sla_report:
   file: 07_usp_shipment_sla_report.sql
   verdict: auto_with_note
-  # @late is filled once and read once -> CTE; DATEPART(ISO_WEEK) needs the WEEKISO fix.
-  rules: [DM007, EX003, EX004, EX005, EX006, EX009, ST002, ST004, ST006]
+  # @late is filled once and read once -> CTE; DATEPART(ISO_WEEK) needs the WEEKISO fix;
+  # requires_cold_chain (BIT) compared with 1 (EX015).
+  rules: [DM007, EX003, EX004, EX005, EX006, EX009, EX015, ST002, ST004, ST006]
   needs_review: []
 
 usp_update_shipment_status:
@@ -70,14 +73,14 @@ usp_recalc_reorder_points_cursor:
   file: 10_usp_recalc_reorder_points_cursor.sql
   verdict: needs_review
   # Cursor, its WHILE @@FETCH_STATUS loop, and an IF EXISTS branch on table data.
-  rules: [CF001, CF002, CF008, EX003, EX004, EX007, EX009, ST003, ST004, ST005, ST006]
+  rules: [CF001, CF002, CF008, EX003, EX004, EX007, EX009, EX015, ST003, ST004, ST005, ST006]
   needs_review: [CF001, CF002, CF008, ST005]
 
 usp_export_dispenses_by_region_dynamic:
   file: 11_usp_export_dispenses_by_region_dynamic.sql
   verdict: needs_review
   # sp_executesql of run-time SQL; QUOTENAME() has no Databricks equivalent.
-  rules: [CF005, EX003, EX010, EX013, EX014, ST003, ST004, ST006]
+  rules: [CF005, EX003, EX010, EX013, EX014, EX015, ST003, ST004, ST006]
   needs_review: [CF005, EX013]
 
 usp_close_month_end:
@@ -85,5 +88,5 @@ usp_close_month_end:
   verdict: needs_review
   # TRY/CATCH, explicit transaction, THROW, data-dependent IF, batched DELETE TOP with
   # OUTPUT INTO inside a WHILE loop, @@ROWCOUNT / @@TRANCOUNT, SCOPE_IDENTITY().
-  rules: [CF002, CF003, CF004, CF007, CF008, DM003, DM004, EX004, EX007, EX011, ST004, ST005, ST006, ST007]
+  rules: [CF002, CF003, CF004, CF007, CF008, DM003, DM004, EX004, EX007, EX011, EX015, ST004, ST005, ST006, ST007]
   needs_review: [CF002, CF003, CF004, CF007, CF008, DM003, DM004, ST005, ST007]

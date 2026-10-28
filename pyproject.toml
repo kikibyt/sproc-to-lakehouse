@@ -19,6 +19,11 @@ dependencies = [
 dev = [
     "pytest>=8.0",
     "ruff>=0.6",
+    "Jinja2>=3.1",
+]
+# Optional: check generated SQL against a local Apache Spark (needs Java 17+).
+spark = [
+    "pyspark>=4.0",
 ]
 
 [tool.setuptools.packages.find]
@@ -27,6 +32,9 @@ where = ["src"]
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 addopts = "-ra"
+markers = [
+    "spark: needs pyspark and a Java runtime (skipped when unavailable)",
+]
 
 [tool.ruff]
 line-length = 100

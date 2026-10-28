@@ -7,7 +7,9 @@ from dataclasses import dataclass
 
 from sqlglot import exp
 
+from sproc_to_lakehouse.catalog import Catalog
 from sproc_to_lakehouse.models import (
+    Block,
     Finding,
     IfNode,
     Node,
@@ -19,7 +21,7 @@ from sproc_to_lakehouse.models import (
 )
 from sproc_to_lakehouse.parser.lexer import Token
 
-CheckFn = Callable[["Rule", Procedure], Iterable[Finding]]
+CheckFn = Callable[..., Iterable[Finding]]
 
 
 @dataclass(frozen=True)
@@ -28,8 +30,12 @@ class Rule:
     construct: str
     summary: str
     check: CheckFn
+    needs_catalog: bool = False
+    """Type-dependent rules only run when DDL is available (``check(rule, proc, catalog)``)."""
 
-    def run(self, procedure: Procedure) -> list[Finding]:
+    def run(self, procedure: Procedure, catalog: Catalog | None = None) -> list[Finding]:
+        if self.needs_catalog:
+            return list(self.check(self, procedure, catalog)) if catalog is not None else []
         return list(self.check(self, procedure))
 
     def finding(
@@ -51,11 +57,13 @@ class Rule:
         )
 
 
-def rule(rule_id: str, construct: str, summary: str) -> Callable[[CheckFn], Rule]:
+def rule(
+    rule_id: str, construct: str, summary: str, *, needs_catalog: bool = False
+) -> Callable[[CheckFn], Rule]:
     """Decorator turning a check function into a :class:`Rule`."""
 
     def wrap(check: CheckFn) -> Rule:
-        return Rule(rule_id=rule_id, construct=construct, summary=summary, check=check)
+        return Rule(rule_id, construct, summary, check, needs_catalog)
 
     return wrap
 
@@ -86,6 +94,32 @@ def is_temp_cleanup(node: Node) -> bool:
         and node.ddl_target is not None
         and node.ddl_target.is_transient
     )
+
+
+def parameter_default(node: Node) -> tuple[str, exp.Expression] | None:
+    """Match ``IF @x IS NULL SET @x = <value>`` and return ``(x, value)``."""
+    if not isinstance(node, IfNode) or node.else_branch is not None:
+        return None
+    then = node.then_branch
+    if isinstance(then, Block) and len(then.body) == 1:
+        then = then.body[0]
+    cond = node.condition.expression
+    if not (
+        isinstance(then, Statement)
+        and then.kind is StatementKind.SET_VARIABLE
+        and isinstance(then.expression, exp.Set)
+        and isinstance(cond, exp.Is)
+        and isinstance(cond.this, exp.Parameter)
+        and isinstance(cond.expression, exp.Null)
+    ):
+        return None
+    items = then.expression.expressions
+    if len(items) != 1 or not isinstance(items[0].this, exp.EQ):
+        return None
+    target, value = items[0].this.this, items[0].this.expression
+    if not isinstance(target, exp.Parameter) or target.name.lower() != cond.this.name.lower():
+        return None
+    return target.name.lower(), value
 
 
 def iter_units(procedure: Procedure) -> Iterator[SqlUnit]:

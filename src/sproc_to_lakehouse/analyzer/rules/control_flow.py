@@ -4,7 +4,13 @@ from __future__ import annotations
 
 from collections.abc import Iterator
 
-from sproc_to_lakehouse.analyzer.registry import Rule, is_temp_cleanup, rule, snippet
+from sproc_to_lakehouse.analyzer.registry import (
+    Rule,
+    is_temp_cleanup,
+    parameter_default,
+    rule,
+    snippet,
+)
 from sproc_to_lakehouse.models import (
     Finding,
     IfNode,
@@ -119,7 +125,14 @@ def if_branch(r: Rule, procedure: Procedure) -> Iterator[Finding]:
         if not isinstance(node, IfNode) or is_temp_cleanup(node):
             continue
         text = snippet("IF " + node.condition.sql)
-        if node.condition.reads:
+        if parameter_default(node) is not None:
+            yield r.finding(
+                Severity.AUTO,
+                "Parameter default (IF @p IS NULL SET @p = ...): folded into COALESCE(@p, ...).",
+                node.line,
+                text,
+            )
+        elif node.condition.reads:
             tables = ", ".join(t.qualified_name for t in node.condition.reads)
             yield r.finding(
                 Severity.NEEDS_REVIEW,
@@ -130,9 +143,10 @@ def if_branch(r: Rule, procedure: Procedure) -> Iterator[Finding]:
             )
         else:
             yield r.finding(
-                Severity.AUTO_WITH_NOTE,
-                "Branch on parameter/variable values only. Becomes a Python `if` in the "
-                "notebook and a Jinja `{% if %}` on dbt vars.",
+                Severity.NEEDS_REVIEW,
+                "Procedural branch on variable values. A notebook can use a Python `if` and "
+                "dbt a Jinja `{% if %}` on vars, but which statements run then depends on "
+                "run-time values; not generated automatically.",
                 node.line,
                 text,
             )

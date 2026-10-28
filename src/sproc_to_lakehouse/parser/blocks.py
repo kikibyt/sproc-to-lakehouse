@@ -121,13 +121,19 @@ class _BlockParser:
             return self._parse_while()
         return self._parse_statement()
 
+    def _span(self, start: int) -> str:
+        """Source text from token ``start`` up to the last consumed token."""
+        return self.sql[self.tokens[start].start : self.tokens[self.pos - 1].end + 1]
+
     def _parse_begin_end(self) -> Block:
+        start = self.pos
         begin = self._expect_word("BEGIN")
         body = self.parse_items()
         self._expect_word("END")
-        return Block(body=body, line=begin.line)
+        return Block(body=body, line=begin.line, sql=self._span(start))
 
     def _parse_try_catch(self) -> TryCatchNode:
+        start = self.pos
         begin = self._expect_word("BEGIN")
         self._expect_word("TRY")
         try_body = self.parse_items(until_end="TRY")
@@ -139,9 +145,12 @@ class _BlockParser:
         catch_body = self.parse_items(until_end="CATCH")
         self._expect_word("END")
         self._expect_word("CATCH")
-        return TryCatchNode(try_body=try_body, catch_body=catch_body, line=begin.line)
+        return TryCatchNode(
+            try_body=try_body, catch_body=catch_body, line=begin.line, sql=self._span(start)
+        )
 
     def _parse_if(self) -> IfNode:
+        start = self.pos
         if_tok = self._expect_word("IF")
         condition = build_condition(self._scan_condition(), self.sql)
         then_branch = self.parse_node()
@@ -153,12 +162,14 @@ class _BlockParser:
         if lookahead < len(self.tokens) and self.tokens[lookahead].is_word("ELSE"):
             self.pos = lookahead + 1
             else_branch = self.parse_node()
-        return IfNode(condition, then_branch, else_branch, line=if_tok.line)
+        return IfNode(condition, then_branch, else_branch, line=if_tok.line, sql=self._span(start))
 
     def _parse_while(self) -> WhileNode:
+        start = self.pos
         while_tok = self._expect_word("WHILE")
         condition = build_condition(self._scan_condition(), self.sql)
-        return WhileNode(condition, self.parse_node(), line=while_tok.line)
+        body = self.parse_node()
+        return WhileNode(condition, body, line=while_tok.line, sql=self._span(start))
 
     def _scan_condition(self) -> tuple[Token, ...]:
         start = self.pos

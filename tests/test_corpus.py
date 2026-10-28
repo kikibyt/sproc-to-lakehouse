@@ -10,6 +10,7 @@ import yaml
 from sqlglot import exp
 
 from sproc_to_lakehouse.analyzer import analyze
+from sproc_to_lakehouse.catalog import Catalog
 from sproc_to_lakehouse.models import Severity, TableKind
 from sproc_to_lakehouse.parser import parse_file
 
@@ -17,6 +18,7 @@ from .conftest import SAMPLES_DIR
 
 TSQL_DIR = SAMPLES_DIR / "tsql"
 DDL_FILE = SAMPLES_DIR / "ddl" / "00_schema.sql"
+CATALOG = Catalog.from_files([SAMPLES_DIR / "ddl" / "00_schema.sql"])
 EXPECTED = yaml.safe_load((SAMPLES_DIR / "expected_findings.yml").read_text(encoding="utf-8"))
 SAMPLE_FILES = sorted(TSQL_DIR.glob("*.sql"))
 
@@ -37,7 +39,7 @@ def test_findings_match_answer_key(name):
     procedure = load(TSQL_DIR / entry["file"])
     assert procedure.name == name
 
-    analysis = analyze(procedure)
+    analysis = analyze(procedure, CATALOG)
     rule_ids = sorted({f.rule_id for f in analysis.findings})
     review_ids = sorted({f.rule_id for f in analysis.by_severity(Severity.NEEDS_REVIEW)})
 

@@ -22,3 +22,31 @@ def make_procedure(body: str, params: str = "") -> Procedure:
 @pytest.fixture
 def proc():
     return make_procedure
+
+
+@pytest.fixture(scope="session")
+def catalog():
+    from sproc_to_lakehouse.catalog import Catalog
+
+    return Catalog.from_files([SAMPLES_DIR / "ddl" / "00_schema.sql"])
+
+
+@pytest.fixture(scope="session")
+def corpus_plans(catalog):
+    """Plans for the 12 sample procedures, keyed by procedure name."""
+    from sproc_to_lakehouse.codegen import build_plans
+
+    plans, _ = build_plans(SAMPLES_DIR / "tsql", SAMPLES_DIR / "ddl")
+    return {plan.name: plan for plan in plans}
+
+
+@pytest.fixture
+def plan_for(catalog):
+    """Build a plan for a small T-SQL body (with the sample DDL loaded)."""
+    from sproc_to_lakehouse.analyzer import analyze
+    from sproc_to_lakehouse.codegen.plan import build_plan
+
+    def build(body: str, params: str = ""):
+        return build_plan(analyze(make_procedure(body, params), catalog), catalog)
+
+    return build
