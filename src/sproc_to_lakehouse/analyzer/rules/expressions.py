@@ -20,7 +20,11 @@ from sproc_to_lakehouse.analyzer.registry import (
     rule,
     snippet,
 )
+from sproc_to_lakehouse.catalog import Catalog
 from sproc_to_lakehouse.models import Finding, Procedure, Severity
+from sproc_to_lakehouse.sqltypes import TypeResolver, transient_schemas
+from sproc_to_lakehouse.sqlutil import STRING_FUNCTIONS, is_string_concat
+from sproc_to_lakehouse.typed_rewrites import bit_to_boolean, changed, compact_date_literal
 
 
 def _parsed_units(procedure: Procedure) -> Iterator[tuple[SqlUnit, exp.Expression]]:
@@ -163,38 +167,10 @@ def isnull(r: Rule, procedure: Procedure) -> Iterator[Finding]:
             )
 
 
-_STRING_FUNCTIONS = (
-    exp.Upper, exp.Lower, exp.Trim, exp.Substring, exp.Left, exp.Right, exp.Replace,
-    exp.StrPosition, exp.Concat, exp.Length, exp.Repeat,
-)  # fmt: skip
-
-
-def _is_stringish(node: exp.Expression) -> bool:
-    if isinstance(node, exp.National):  # N'...'
-        return True
-    if isinstance(node, exp.Literal):
-        return node.is_string
-    if isinstance(node, (exp.Cast, exp.TryCast)):
-        return node.to.is_type(*exp.DataType.TEXT_TYPES)
-    return isinstance(node, _STRING_FUNCTIONS)
-
-
-def _add_chain_leaves(node: exp.Add) -> list[exp.Expression]:
-    leaves: list[exp.Expression] = []
-    for side in (node.left, node.right):
-        while isinstance(side, exp.Paren):
-            side = side.this
-        leaves.extend(_add_chain_leaves(side) if isinstance(side, exp.Add) else [side])
-    return leaves
-
-
 @rule("EX010", "string_concat_plus", "String concatenation with +")
 def string_concat_plus(r: Rule, procedure: Procedure) -> Iterator[Finding]:
     for unit, expression in _parsed_units(procedure):
-        if any(
-            any(_is_stringish(leaf) for leaf in _add_chain_leaves(add))
-            for add in expression.find_all(exp.Add)
-        ):
+        if any(is_string_concat(add) for add in expression.find_all(exp.Add)):
             yield r.finding(
                 Severity.AUTO_WITH_NOTE,
                 "'+' concatenates strings in SQL Server but is numeric addition in "
@@ -211,7 +187,7 @@ def string_function(r: Rule, procedure: Procedure) -> Iterator[Finding]:
     yield from _auto_construct(
         r,
         procedure,
-        _STRING_FUNCTIONS,
+        STRING_FUNCTIONS,
         "String functions map directly (CHARINDEX becomes LOCATE, LTRIM/RTRIM stay).",
     )
 
@@ -278,6 +254,42 @@ def string_agg(r: Rule, procedure: Procedure) -> Iterator[Finding]:
             )
 
 
+def _typed_units(procedure: Procedure, catalog: Catalog):
+    resolver = TypeResolver(catalog, transient_schemas(procedure.statements()))
+    for unit, expression in _parsed_units(procedure):
+        yield unit, expression, resolver
+
+
+@rule("EX015", "bit_column", "BIT column used as 0/1", needs_catalog=True)
+def bit_column(r: Rule, procedure: Procedure, catalog: Catalog) -> Iterator[Finding]:
+    for unit, expression, resolver in _typed_units(procedure, catalog):
+        if changed(expression, bit_to_boolean(expression, resolver)):
+            yield r.finding(
+                Severity.AUTO_WITH_NOTE,
+                "BIT column compared with or assigned 0/1. On Databricks BIT is BOOLEAN and "
+                "ANSI mode rejects BOOLEAN = INT; rewritten to TRUE/FALSE and "
+                "CAST(... AS BOOLEAN).",
+                unit.line,
+                snippet(unit.sql),
+                rewrite=rw.BIT_TO_BOOLEAN,
+            )
+
+
+@rule("EX016", "compact_date_literal", "'yyyymmdd' string used as a date", needs_catalog=True)
+def compact_date(r: Rule, procedure: Procedure, catalog: Catalog) -> Iterator[Finding]:
+    for unit, expression, resolver in _typed_units(procedure, catalog):
+        if changed(expression, compact_date_literal(expression, resolver)):
+            yield r.finding(
+                Severity.AUTO_WITH_NOTE,
+                "Compact date string such as '19000101' compared with a date. SQL Server "
+                "converts it implicitly; Spark fails at run time (CAST_INVALID_INPUT). "
+                "Rewritten to a DATE literal.",
+                unit.line,
+                snippet(unit.sql),
+                rewrite=rw.COMPACT_DATE_LITERAL,
+            )
+
+
 RULES: list[Rule] = [
     cte,
     window_function,
@@ -293,4 +305,6 @@ RULES: list[Rule] = [
     len_trailing_spaces,
     unsupported_function,
     string_agg,
+    bit_column,
+    compact_date,
 ]

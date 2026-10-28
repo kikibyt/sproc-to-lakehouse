@@ -116,6 +116,10 @@ class Statement:
     def parsed(self) -> bool:
         return self.expression is not None and self.parse_error is None
 
+    @property
+    def end_line(self) -> int:
+        return self.tokens[-1].line if self.tokens else self.line
+
 
 @dataclass
 class Condition:
@@ -134,6 +138,7 @@ class Block:
 
     body: list[Node]
     line: int
+    sql: str = field(default="", repr=False)
 
 
 @dataclass
@@ -142,6 +147,7 @@ class IfNode:
     then_branch: Node
     else_branch: Node | None
     line: int
+    sql: str = field(default="", repr=False)
 
 
 @dataclass
@@ -149,6 +155,7 @@ class WhileNode:
     condition: Condition
     body: Node
     line: int
+    sql: str = field(default="", repr=False)
 
 
 @dataclass
@@ -156,6 +163,7 @@ class TryCatchNode:
     try_body: list[Node]
     catch_body: list[Node]
     line: int
+    sql: str = field(default="", repr=False)
 
 
 Node = Statement | Block | IfNode | WhileNode | TryCatchNode

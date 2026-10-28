@@ -35,7 +35,7 @@ _MUTATIONS = {K.UPDATE, K.DELETE, K.MERGE, K.TRUNCATE}
 
 
 @dataclass
-class _Usage:
+class TransientUsage:
     """How one temp table / table variable is used, in source order."""
 
     table: TableRef
@@ -44,16 +44,16 @@ class _Usage:
     written_in_loop: bool = False
 
 
-def _transient_usage(procedure: Procedure) -> dict[str, _Usage]:
+def transient_usage(procedure: Procedure) -> dict[str, TransientUsage]:
     in_loop: set[int] = set()
     for node in procedure.iter_nodes():
         if isinstance(node, WhileNode):
             in_loop.update(id(n) for n in iter_nodes([node.body]))
 
-    usages: dict[str, _Usage] = {}
+    usages: dict[str, TransientUsage] = {}
 
-    def usage(ref: TableRef) -> _Usage:
-        return usages.setdefault(ref.name, _Usage(ref))
+    def usage(ref: TableRef) -> TransientUsage:
+        return usages.setdefault(ref.name, TransientUsage(ref))
 
     for order, node in enumerate(procedure.iter_nodes()):
         if isinstance(node, Statement):
@@ -71,7 +71,7 @@ def _transient_usage(procedure: Procedure) -> dict[str, _Usage]:
     return usages
 
 
-def _assess(u: _Usage) -> tuple[Severity, str, str | None]:
+def assess_transient(u: TransientUsage) -> tuple[Severity, str, str | None]:
     name = u.table.name
     mutations = [s for _, s in u.writes if s.kind in _MUTATIONS]
     if mutations:
@@ -120,10 +120,10 @@ def _assess(u: _Usage) -> tuple[Severity, str, str | None]:
 
 
 def _transient_rule(r: Rule, procedure: Procedure, kinds: set[TableKind]) -> Iterator[Finding]:
-    for u in _transient_usage(procedure).values():
+    for u in transient_usage(procedure).values():
         if u.table.kind not in kinds or not u.writes:
             continue
-        severity, message, rewrite = _assess(u)
+        severity, message, rewrite = assess_transient(u)
         first = min(u.writes, key=lambda w: w[0])[1]
         yield r.finding(severity, message, first.line, snippet(first.sql), rewrite)
 
@@ -150,8 +150,8 @@ def scalar_from_query(r: Rule, procedure: Procedure) -> Iterator[Finding]:
         if from_select or from_subquery:
             yield r.finding(
                 Severity.AUTO_WITH_NOTE,
-                "Variable is loaded from a query. Becomes a collected scalar in the "
-                "notebook, and an inline subquery or run_query() in dbt.",
+                "Variable is loaded from a query. The notebook collects the value at this "
+                "point; dbt inlines it as a scalar subquery, evaluated when the model runs.",
                 stmt.line,
                 snippet(stmt.sql),
             )

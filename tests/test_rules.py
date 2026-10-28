@@ -6,7 +6,10 @@ import pytest
 
 from sproc_to_lakehouse.analyzer import ALL_RULES, analyze
 from sproc_to_lakehouse.analyzer.rewrites import REWRITES
+from sproc_to_lakehouse.catalog import Catalog
 from sproc_to_lakehouse.models import Severity
+
+from .conftest import SAMPLES_DIR
 
 AUTO, NOTE, REVIEW = Severity.AUTO, Severity.AUTO_WITH_NOTE, Severity.NEEDS_REVIEW
 PARAMS = "@p INT, @d DATE, @out INT OUTPUT"
@@ -20,7 +23,8 @@ RULE_EXAMPLES: list[tuple[str, str, Severity]] = [
     ("CF005", "EXEC (N'SELECT 1')", REVIEW),
     ("CF006", "EXEC dbo.usp_other @p = 1", REVIEW),
     ("CF007", "RAISERROR('bad', 16, 1)", REVIEW),
-    ("CF008", "IF @p = 1 SELECT 1", NOTE),
+    ("CF008", "IF @p = 1 SELECT 1", REVIEW),
+    ("CF008", "IF @d IS NULL SET @d = GETDATE()", AUTO),
     ("CF008", "IF EXISTS (SELECT 1 FROM dbo.t) SELECT 1", REVIEW),
     ("CF009", "RETURN 1", REVIEW),
     ("CF010", "PRINT 'step 1 done'", NOTE),
@@ -60,11 +64,18 @@ RULE_EXAMPLES: list[tuple[str, str, Severity]] = [
     ("EX012", "SELECT LEN(a) FROM dbo.t", NOTE),
     ("EX013", "SELECT STUFF(a, 1, 2, 'x') FROM dbo.t", REVIEW),
     ("EX014", "SELECT STRING_AGG(a, ',') FROM dbo.t", NOTE),
+    # EX015/EX016 need column types; they run against the sample DDL (see findings_for).
+    ("EX015", "SELECT product_id FROM dbo.products WHERE is_cold_chain = 1", NOTE),
+    ("EX015", "UPDATE dbo.dispenses SET is_period_locked = 1", NOTE),
+    ("EX016", "SELECT 1 FROM dbo.dispenses WHERE dispense_date > '20240101'", NOTE),
 ]
 
 
+CATALOG = Catalog.from_files([SAMPLES_DIR / "ddl" / "00_schema.sql"])
+
+
 def findings_for(proc, body: str, rule_id: str):
-    analysis = analyze(proc(body, PARAMS))
+    analysis = analyze(proc(body, PARAMS), CATALOG)
     return [f for f in analysis.findings if f.rule_id == rule_id]
 
 
@@ -223,3 +234,31 @@ def test_verdict_is_worst_severity(proc):
     assert analyze(proc("SET NOCOUNT ON")).verdict is AUTO
     assert analyze(proc("SELECT ISNULL(a, 0) INTO #x FROM dbo.t")).verdict is NOTE
     assert analyze(proc("DECLARE c CURSOR FOR SELECT 1")).verdict is REVIEW
+
+
+def test_integer_string_functions_do_not_make_plus_a_concat(proc):
+    # CHARINDEX and LEN return integers: this '+' is arithmetic, not concatenation.
+    body = "SELECT SUBSTRING(e, CHARINDEX('@', e) + 1, LEN(e) - 1) FROM dbo.t"
+    assert findings_for(proc, body, "EX010") == []
+
+
+def test_type_rules_need_the_catalog(proc):
+    body = "SELECT product_id FROM dbo.products WHERE is_cold_chain = 1"
+    assert not [f for f in analyze(proc(body)).findings if f.rule_id == "EX015"]
+
+
+def test_bit_rule_ignores_non_bit_columns_and_string_codes(proc):
+    assert findings_for(proc, "SELECT 1 FROM dbo.products WHERE lead_time_days = 1", "EX015") == []
+    assert (
+        findings_for(proc, "SELECT 1 FROM dbo.patients WHERE patient_id = '20240101'", "EX016")
+        == []
+    )
+
+
+def test_bit_rule_sees_through_table_variables(proc):
+    body = """
+    DECLARE @late TABLE (shipment_id BIGINT, cold BIT)
+    INSERT INTO @late (shipment_id, cold) SELECT shipment_id, requires_cold_chain FROM dbo.shipments
+    SELECT COUNT(*) FROM @late AS l WHERE l.cold = 1
+    """
+    assert findings_for(proc, body, "EX015")

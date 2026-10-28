@@ -13,6 +13,8 @@ UPDATE_FROM_TO_MERGE = "update_from_to_merge"
 PLUS_TO_CONCAT = "plus_to_concat"
 TRY_CONVERT_SAFE_PARSE = "try_convert_safe_parse"
 ISO_WEEK_EXTRACT = "iso_week_extract"
+BIT_TO_BOOLEAN = "bit_to_boolean"
+COMPACT_DATE_LITERAL = "compact_date_literal"
 
 REWRITES: dict[str, str] = {
     TRANSIENT_TABLE_TO_CTE: "Temp tables / table variables populated without later mutation "
@@ -21,8 +23,12 @@ REWRITES: dict[str, str] = {
     "UPDATE/DELETE has no FROM clause.",
     PLUS_TO_CONCAT: "String '+' becomes CONCAT; sqlglot leaves '+', which Databricks treats as "
     "numeric addition.",
-    TRY_CONVERT_SAFE_PARSE: "TRY_CONVERT with a style becomes TRY_TO_DATE/TRY_TO_TIMESTAMP; "
-    "sqlglot emits the non-TRY variant, which raises on bad input.",
+    TRY_CONVERT_SAFE_PARSE: "TRY_CONVERT with a style becomes CAST(TRY_TO_TIMESTAMP(...)); "
+    "sqlglot emits TO_DATE/TO_TIMESTAMP, which raise on bad input.",
     ISO_WEEK_EXTRACT: "EXTRACT(WEEKISO ...) becomes EXTRACT(WEEK ...), the Databricks ISO 8601 "
     "field.",
+    BIT_TO_BOOLEAN: "BIT columns are BOOLEAN on Databricks: 0/1 comparisons become FALSE/TRUE "
+    "and values written into them are cast to BOOLEAN (needs DDL).",
+    COMPACT_DATE_LITERAL: "'yyyymmdd' strings compared with dates become DATE literals; Spark "
+    "cannot cast them implicitly (needs DDL).",
 }
