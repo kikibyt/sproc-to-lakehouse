@@ -1,0 +1,679 @@
+{
+  "environment": {
+    "sqlserver": "Microsoft SQL Server 2022 (RTM-CU27-GDR) (KB5126934) - 16.0.4305.5 (X64)",
+    "spark": "Apache Spark 4.0.1 with Delta Lake",
+    "data_rows": 3576,
+    "data_tables": 16,
+    "seed": 20240315,
+    "fixes": true
+  },
+  "normalisation": [
+    "decimals compared by value, rounded to the column's scale when known",
+    "trailing spaces ignored (CHAR padding)",
+    "dates/timestamps compared as ISO-8601 text; BIT and BOOLEAN as true/false"
+  ],
+  "totals": {
+    "match": 6,
+    "mismatch": 0,
+    "not_run": 6,
+    "error": 0
+  },
+  "scenarios": [
+    {
+      "procedure": "usp_load_daily_dispense_summary",
+      "params": {
+        "run_date": "2024-03-15"
+      },
+      "status": "match",
+      "reason": null,
+      "changes": {
+        "dbo.daily_dispense_summary": {
+          "before": 4,
+          "after": 5,
+          "inserted": 1,
+          "deleted": 0,
+          "updated": 2
+        }
+      },
+      "sqlserver_seconds": 0.05713875799983725,
+      "spark_seconds": 9.80759837000005,
+      "comparisons": [
+        {
+          "name": "dbo.daily_dispense_summary",
+          "key": [
+            "summary_date",
+            "therapy_area"
+          ],
+          "ignored": [
+            "loaded_at"
+          ],
+          "sqlserver_rows": 5,
+          "spark_rows": 5,
+          "only_in_sqlserver": [],
+          "only_in_spark": [],
+          "value_diffs": [],
+          "only_in_sqlserver_count": 0,
+          "only_in_spark_count": 0,
+          "value_diff_count": 0,
+          "rows_with_value_diffs": 0,
+          "column_mismatch": [],
+          "match": true,
+          "columns": [
+            {
+              "name": "summary_date",
+              "sqlserver": "18354f6198ab",
+              "spark": "18354f6198ab",
+              "match": true
+            },
+            {
+              "name": "summary_date_key",
+              "sqlserver": "1912b42ebc63",
+              "spark": "1912b42ebc63",
+              "match": true
+            },
+            {
+              "name": "therapy_area",
+              "sqlserver": "d486ac3be1e3",
+              "spark": "d486ac3be1e3",
+              "match": true
+            },
+            {
+              "name": "dispense_count",
+              "sqlserver": "1020a83a1f66",
+              "spark": "1020a83a1f66",
+              "match": true
+            },
+            {
+              "name": "patient_count",
+              "sqlserver": "10ee8ab0c67f",
+              "spark": "10ee8ab0c67f",
+              "match": true
+            },
+            {
+              "name": "total_quantity",
+              "sqlserver": "31212b929540",
+              "spark": "31212b929540",
+              "match": true
+            },
+            {
+              "name": "total_days_supply",
+              "sqlserver": "eba14a0c2684",
+              "spark": "eba14a0c2684",
+              "match": true
+            },
+            {
+              "name": "total_billed",
+              "sqlserver": "8f4a0cb55443",
+              "spark": "8f4a0cb55443",
+              "match": true
+            },
+            {
+              "name": "total_paid",
+              "sqlserver": "ce3a68511fd5",
+              "spark": "ce3a68511fd5",
+              "match": true
+            },
+            {
+              "name": "paid_to_billed_pct",
+              "sqlserver": "78618be0f697",
+              "spark": "78618be0f697",
+              "match": true
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "procedure": "usp_build_monthly_inventory_snapshot",
+      "params": {
+        "snapshot_month": "2024-03-01"
+      },
+      "status": "match",
+      "reason": null,
+      "changes": {
+        "dbo.inventory_snapshots": {
+          "before": 216,
+          "after": 288,
+          "inserted": 72,
+          "deleted": 0,
+          "updated": 0
+        }
+      },
+      "sqlserver_seconds": 0.04115575500009072,
+      "spark_seconds": 11.892865227999664,
+      "comparisons": [
+        {
+          "name": "dbo.inventory_snapshots",
+          "key": [
+            "snapshot_month",
+            "site_id",
+            "product_id"
+          ],
+          "ignored": [
+            "loaded_at"
+          ],
+          "sqlserver_rows": 288,
+          "spark_rows": 288,
+          "only_in_sqlserver": [],
+          "only_in_spark": [],
+          "value_diffs": [],
+          "only_in_sqlserver_count": 0,
+          "only_in_spark_count": 0,
+          "value_diff_count": 0,
+          "rows_with_value_diffs": 0,
+          "column_mismatch": [],
+          "match": true,
+          "columns": [
+            {
+              "name": "snapshot_month",
+              "sqlserver": "cd4c5ed48546",
+              "spark": "cd4c5ed48546",
+              "match": true
+            },
+            {
+              "name": "site_id",
+              "sqlserver": "197872113c5a",
+              "spark": "197872113c5a",
+              "match": true
+            },
+            {
+              "name": "product_id",
+              "sqlserver": "0bddd1094371",
+              "spark": "0bddd1094371",
+              "match": true
+            },
+            {
+              "name": "opening_qty",
+              "sqlserver": "d892d826cceb",
+              "spark": "d892d826cceb",
+              "match": true
+            },
+            {
+              "name": "received_qty",
+              "sqlserver": "781525d9fb86",
+              "spark": "781525d9fb86",
+              "match": true
+            },
+            {
+              "name": "dispensed_qty",
+              "sqlserver": "f99eb7bcacf6",
+              "spark": "f99eb7bcacf6",
+              "match": true
+            },
+            {
+              "name": "adjusted_qty",
+              "sqlserver": "b30199c469e7",
+              "spark": "b30199c469e7",
+              "match": true
+            },
+            {
+              "name": "closing_qty",
+              "sqlserver": "4f2fc86f4dcc",
+              "spark": "4f2fc86f4dcc",
+              "match": true
+            },
+            {
+              "name": "avg_dispensed_3m",
+              "sqlserver": "b7b9f1704153",
+              "spark": "b7b9f1704153",
+              "match": true
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "procedure": "usp_upsert_patient_enrollment",
+      "params": {
+        "load_batch_id": "1"
+      },
+      "status": "match",
+      "reason": null,
+      "changes": {
+        "dbo.dim_patient_enrollment": {
+          "before": 40,
+          "after": 68,
+          "inserted": 28,
+          "deleted": 0,
+          "updated": 13
+        }
+      },
+      "sqlserver_seconds": 0.03368452899985641,
+      "spark_seconds": 7.832429525999942,
+      "comparisons": [
+        {
+          "name": "dbo.dim_patient_enrollment",
+          "key": [
+            "patient_id",
+            "program_code"
+          ],
+          "ignored": [
+            "created_at",
+            "updated_at"
+          ],
+          "sqlserver_rows": 68,
+          "spark_rows": 68,
+          "only_in_sqlserver": [],
+          "only_in_spark": [],
+          "value_diffs": [],
+          "only_in_sqlserver_count": 0,
+          "only_in_spark_count": 0,
+          "value_diff_count": 0,
+          "rows_with_value_diffs": 0,
+          "column_mismatch": [],
+          "match": true,
+          "columns": [
+            {
+              "name": "patient_id",
+              "sqlserver": "9e8f9eb86774",
+              "spark": "9e8f9eb86774",
+              "match": true
+            },
+            {
+              "name": "program_code",
+              "sqlserver": "b4d40cb618a3",
+              "spark": "b4d40cb618a3",
+              "match": true
+            },
+            {
+              "name": "enrollment_status",
+              "sqlserver": "92f48ffa09d9",
+              "spark": "92f48ffa09d9",
+              "match": true
+            },
+            {
+              "name": "enrolled_date",
+              "sqlserver": "ebe810d91add",
+              "spark": "ebe810d91add",
+              "match": true
+            },
+            {
+              "name": "disenrolled_date",
+              "sqlserver": "6f81b6c45c49",
+              "spark": "6f81b6c45c49",
+              "match": true
+            },
+            {
+              "name": "payer_id",
+              "sqlserver": "deb2171cc7f9",
+              "spark": "deb2171cc7f9",
+              "match": true
+            },
+            {
+              "name": "case_manager_email",
+              "sqlserver": "2ed44cf02b41",
+              "spark": "2ed44cf02b41",
+              "match": true
+            },
+            {
+              "name": "is_active",
+              "sqlserver": "0cfec3bbb11a",
+              "spark": "0cfec3bbb11a",
+              "match": true
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "procedure": "usp_calc_refill_gaps",
+      "params": {
+        "as_of_date": "2024-03-31",
+        "gap_threshold_days": "7"
+      },
+      "status": "match",
+      "reason": null,
+      "changes": {
+        "dbo.refill_gap_events": {
+          "before": 5,
+          "after": 514,
+          "inserted": 513,
+          "deleted": 4,
+          "updated": 1
+        }
+      },
+      "sqlserver_seconds": 0.08435663499994916,
+      "spark_seconds": 5.530232809000154,
+      "comparisons": [
+        {
+          "name": "dbo.refill_gap_events",
+          "key": [
+            "patient_id",
+            "product_id",
+            "fill_seq"
+          ],
+          "ignored": [
+            "calculated_at"
+          ],
+          "sqlserver_rows": 514,
+          "spark_rows": 514,
+          "only_in_sqlserver": [],
+          "only_in_spark": [],
+          "value_diffs": [],
+          "only_in_sqlserver_count": 0,
+          "only_in_spark_count": 0,
+          "value_diff_count": 0,
+          "rows_with_value_diffs": 0,
+          "column_mismatch": [],
+          "match": true,
+          "columns": [
+            {
+              "name": "patient_id",
+              "sqlserver": "93b848085d97",
+              "spark": "93b848085d97",
+              "match": true
+            },
+            {
+              "name": "product_id",
+              "sqlserver": "f24c5c6634da",
+              "spark": "f24c5c6634da",
+              "match": true
+            },
+            {
+              "name": "fill_seq",
+              "sqlserver": "5a20f3414d5a",
+              "spark": "5a20f3414d5a",
+              "match": true
+            },
+            {
+              "name": "dispense_date",
+              "sqlserver": "f5266b6e8298",
+              "spark": "f5266b6e8298",
+              "match": true
+            },
+            {
+              "name": "supply_end_date",
+              "sqlserver": "f5492144baf2",
+              "spark": "f5492144baf2",
+              "match": true
+            },
+            {
+              "name": "next_dispense_date",
+              "sqlserver": "f2e01fa1885b",
+              "spark": "f2e01fa1885b",
+              "match": true
+            },
+            {
+              "name": "gap_days",
+              "sqlserver": "837f4ab27ce1",
+              "spark": "837f4ab27ce1",
+              "match": true
+            },
+            {
+              "name": "gap_category",
+              "sqlserver": "e5fa3145ca00",
+              "spark": "e5fa3145ca00",
+              "match": true
+            },
+            {
+              "name": "is_open_gap",
+              "sqlserver": "e36448567f3e",
+              "spark": "e36448567f3e",
+              "match": true
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "procedure": "usp_classify_payer_claims",
+      "params": {
+        "from_date": "2024-03-01",
+        "to_date": "2024-03-31"
+      },
+      "status": "match",
+      "reason": null,
+      "changes": {
+        "dbo.claim_classification": {
+          "before": 20,
+          "after": 404,
+          "inserted": 384,
+          "deleted": 0,
+          "updated": 13
+        }
+      },
+      "sqlserver_seconds": 0.03743314900020778,
+      "spark_seconds": 12.300028884999847,
+      "comparisons": [
+        {
+          "name": "dbo.claim_classification",
+          "key": [
+            "claim_id"
+          ],
+          "ignored": [
+            "classified_at"
+          ],
+          "sqlserver_rows": 404,
+          "spark_rows": 404,
+          "only_in_sqlserver": [],
+          "only_in_spark": [],
+          "value_diffs": [],
+          "only_in_sqlserver_count": 0,
+          "only_in_spark_count": 0,
+          "value_diff_count": 0,
+          "rows_with_value_diffs": 0,
+          "column_mismatch": [],
+          "match": true,
+          "columns": [
+            {
+              "name": "claim_id",
+              "sqlserver": "5d0244a56880",
+              "spark": "5d0244a56880",
+              "match": true
+            },
+            {
+              "name": "dispense_id",
+              "sqlserver": "453c5545c7f2",
+              "spark": "453c5545c7f2",
+              "match": true
+            },
+            {
+              "name": "submitted_date",
+              "sqlserver": "1ab48d7ca81b",
+              "spark": "1ab48d7ca81b",
+              "match": true
+            },
+            {
+              "name": "payer_type",
+              "sqlserver": "558665f54721",
+              "spark": "558665f54721",
+              "match": true
+            },
+            {
+              "name": "coverage_segment",
+              "sqlserver": "b47622a98054",
+              "spark": "b47622a98054",
+              "match": true
+            },
+            {
+              "name": "claim_outcome",
+              "sqlserver": "04a88a97a50c",
+              "spark": "04a88a97a50c",
+              "match": true
+            },
+            {
+              "name": "copay_tier",
+              "sqlserver": "4851d72b989d",
+              "spark": "4851d72b989d",
+              "match": true
+            },
+            {
+              "name": "paid_ratio",
+              "sqlserver": "31d29f252680",
+              "spark": "31d29f252680",
+              "match": true
+            },
+            {
+              "name": "follow_up_priority",
+              "sqlserver": "3b1a1ac468e6",
+              "spark": "3b1a1ac468e6",
+              "match": true
+            },
+            {
+              "name": "high_oop_flag",
+              "sqlserver": "606460057e16",
+              "spark": "606460057e16",
+              "match": true
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "procedure": "usp_shipment_sla_report",
+      "params": {
+        "week_start": "2024-03-04"
+      },
+      "status": "match",
+      "reason": null,
+      "changes": {},
+      "sqlserver_seconds": 0.06814318099986849,
+      "spark_seconds": 5.540391558999545,
+      "comparisons": [
+        {
+          "name": "result set 1",
+          "key": [],
+          "ignored": [],
+          "sqlserver_rows": 6,
+          "spark_rows": 6,
+          "only_in_sqlserver": [],
+          "only_in_spark": [],
+          "value_diffs": [],
+          "only_in_sqlserver_count": 0,
+          "only_in_spark_count": 0,
+          "value_diff_count": 0,
+          "rows_with_value_diffs": 0,
+          "column_mismatch": [],
+          "match": true,
+          "columns": [
+            {
+              "name": "iso_week",
+              "sqlserver": "5161d6c49db4",
+              "spark": "5161d6c49db4",
+              "match": true
+            },
+            {
+              "name": "region_code",
+              "sqlserver": "5b824b6ecdd9",
+              "spark": "5b824b6ecdd9",
+              "match": true
+            },
+            {
+              "name": "ship_method",
+              "sqlserver": "e121cd57dfb7",
+              "spark": "e121cd57dfb7",
+              "match": true
+            },
+            {
+              "name": "shipped_count",
+              "sqlserver": "7549d8e68249",
+              "spark": "7549d8e68249",
+              "match": true
+            },
+            {
+              "name": "on_time_count",
+              "sqlserver": "1ea31770a9a8",
+              "spark": "1ea31770a9a8",
+              "match": true
+            },
+            {
+              "name": "late_1_2_days",
+              "sqlserver": "49bfc8eb7f3b",
+              "spark": "49bfc8eb7f3b",
+              "match": true
+            },
+            {
+              "name": "late_3_plus_days",
+              "sqlserver": "fb8bd06ba551",
+              "spark": "fb8bd06ba551",
+              "match": true
+            },
+            {
+              "name": "cold_chain_late",
+              "sqlserver": "27c4b7bcc7f6",
+              "spark": "27c4b7bcc7f6",
+              "match": true
+            },
+            {
+              "name": "on_time_pct",
+              "sqlserver": "78c7bc4c251f",
+              "spark": "78c7bc4c251f",
+              "match": true
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "procedure": "usp_standardize_patient_contact",
+      "params": {},
+      "status": "not_run",
+      "reason": "1 manual step(s) must be converted by a person first",
+      "changes": {},
+      "sqlserver_seconds": null,
+      "spark_seconds": null,
+      "comparisons": []
+    },
+    {
+      "procedure": "usp_update_shipment_status",
+      "params": {
+        "as_of": "2024-03-12 18:00:00"
+      },
+      "status": "not_run",
+      "reason": "3 manual step(s) must be converted by a person first",
+      "changes": {},
+      "sqlserver_seconds": null,
+      "spark_seconds": null,
+      "comparisons": []
+    },
+    {
+      "procedure": "usp_rebuild_prescriber_rollup",
+      "params": {
+        "period_month": "2024-03-01"
+      },
+      "status": "not_run",
+      "reason": "2 manual step(s) must be converted by a person first",
+      "changes": {},
+      "sqlserver_seconds": null,
+      "spark_seconds": null,
+      "comparisons": []
+    },
+    {
+      "procedure": "usp_recalc_reorder_points_cursor",
+      "params": {
+        "as_of_date": "2024-03-31"
+      },
+      "status": "not_run",
+      "reason": "1 manual step(s) must be converted by a person first",
+      "changes": {},
+      "sqlserver_seconds": null,
+      "spark_seconds": null,
+      "comparisons": []
+    },
+    {
+      "procedure": "usp_export_dispenses_by_region_dynamic",
+      "params": {
+        "from_date": "2024-03-01",
+        "to_date": "2024-03-31"
+      },
+      "status": "not_run",
+      "reason": "1 manual step(s) must be converted by a person first",
+      "changes": {},
+      "sqlserver_seconds": null,
+      "spark_seconds": null,
+      "comparisons": []
+    },
+    {
+      "procedure": "usp_close_month_end",
+      "params": {
+        "period_month": "2024-03-01"
+      },
+      "status": "not_run",
+      "reason": "1 manual step(s) must be converted by a person first",
+      "changes": {},
+      "sqlserver_seconds": null,
+      "spark_seconds": null,
+      "comparisons": []
+    }
+  ]
+}

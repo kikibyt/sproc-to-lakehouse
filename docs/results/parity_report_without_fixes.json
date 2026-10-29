@@ -1,0 +1,351 @@
+{
+  "environment": {
+    "sqlserver": "Microsoft SQL Server 2022 (RTM-CU27-GDR) (KB5126934) - 16.0.4305.5 (X64)",
+    "spark": "Apache Spark 4.0.1 with Delta Lake",
+    "data_rows": 3576,
+    "data_tables": 16,
+    "seed": 20240315,
+    "fixes": false
+  },
+  "normalisation": [
+    "decimals compared by value, rounded to the column's scale when known",
+    "trailing spaces ignored (CHAR padding)",
+    "dates/timestamps compared as ISO-8601 text; BIT and BOOLEAN as true/false"
+  ],
+  "totals": {
+    "match": 2,
+    "mismatch": 0,
+    "not_run": 6,
+    "error": 4
+  },
+  "scenarios": [
+    {
+      "procedure": "usp_load_daily_dispense_summary",
+      "params": {
+        "run_date": "2024-03-15"
+      },
+      "status": "match",
+      "reason": null,
+      "changes": {
+        "dbo.daily_dispense_summary": {
+          "before": 4,
+          "after": 5,
+          "inserted": 1,
+          "deleted": 0,
+          "updated": 2
+        }
+      },
+      "sqlserver_seconds": 0.04864623699995718,
+      "spark_seconds": 11.92170113100019,
+      "comparisons": [
+        {
+          "name": "dbo.daily_dispense_summary",
+          "key": [
+            "summary_date",
+            "therapy_area"
+          ],
+          "ignored": [
+            "loaded_at"
+          ],
+          "sqlserver_rows": 5,
+          "spark_rows": 5,
+          "only_in_sqlserver": [],
+          "only_in_spark": [],
+          "value_diffs": [],
+          "only_in_sqlserver_count": 0,
+          "only_in_spark_count": 0,
+          "value_diff_count": 0,
+          "rows_with_value_diffs": 0,
+          "column_mismatch": [],
+          "match": true,
+          "columns": [
+            {
+              "name": "summary_date",
+              "sqlserver": "18354f6198ab",
+              "spark": "18354f6198ab",
+              "match": true
+            },
+            {
+              "name": "summary_date_key",
+              "sqlserver": "1912b42ebc63",
+              "spark": "1912b42ebc63",
+              "match": true
+            },
+            {
+              "name": "therapy_area",
+              "sqlserver": "d486ac3be1e3",
+              "spark": "d486ac3be1e3",
+              "match": true
+            },
+            {
+              "name": "dispense_count",
+              "sqlserver": "1020a83a1f66",
+              "spark": "1020a83a1f66",
+              "match": true
+            },
+            {
+              "name": "patient_count",
+              "sqlserver": "10ee8ab0c67f",
+              "spark": "10ee8ab0c67f",
+              "match": true
+            },
+            {
+              "name": "total_quantity",
+              "sqlserver": "31212b929540",
+              "spark": "31212b929540",
+              "match": true
+            },
+            {
+              "name": "total_days_supply",
+              "sqlserver": "eba14a0c2684",
+              "spark": "eba14a0c2684",
+              "match": true
+            },
+            {
+              "name": "total_billed",
+              "sqlserver": "8f4a0cb55443",
+              "spark": "8f4a0cb55443",
+              "match": true
+            },
+            {
+              "name": "total_paid",
+              "sqlserver": "ce3a68511fd5",
+              "spark": "ce3a68511fd5",
+              "match": true
+            },
+            {
+              "name": "paid_to_billed_pct",
+              "sqlserver": "78618be0f697",
+              "spark": "78618be0f697",
+              "match": true
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "procedure": "usp_build_monthly_inventory_snapshot",
+      "params": {
+        "snapshot_month": "2024-03-01"
+      },
+      "status": "error",
+      "reason": "[PARSE_SYNTAX_ERROR] Syntax error at or near 'FROM'. SQLSTATE: 42601 (line 16, pos 0)",
+      "changes": {},
+      "sqlserver_seconds": null,
+      "spark_seconds": null,
+      "comparisons": []
+    },
+    {
+      "procedure": "usp_upsert_patient_enrollment",
+      "params": {
+        "load_batch_id": "1"
+      },
+      "status": "error",
+      "reason": "[CANNOT_PARSE_TIMESTAMP] Text '13/45/2024' could not be parsed: Invalid value for MonthOfYear (valid values 1 - 12): 13. Use `try_to_timestamp` to tolerate invalid input string and return NULL instead. SQLSTATE: 22007",
+      "changes": {},
+      "sqlserver_seconds": null,
+      "spark_seconds": null,
+      "comparisons": []
+    },
+    {
+      "procedure": "usp_calc_refill_gaps",
+      "params": {
+        "as_of_date": "2024-03-31",
+        "gap_threshold_days": "7"
+      },
+      "status": "error",
+      "reason": "Table does not support truncates: spark_catalog.dbo.refill_gap_events.",
+      "changes": {},
+      "sqlserver_seconds": null,
+      "spark_seconds": null,
+      "comparisons": []
+    },
+    {
+      "procedure": "usp_classify_payer_claims",
+      "params": {
+        "from_date": "2024-03-01",
+        "to_date": "2024-03-31"
+      },
+      "status": "match",
+      "reason": null,
+      "changes": {
+        "dbo.claim_classification": {
+          "before": 20,
+          "after": 404,
+          "inserted": 384,
+          "deleted": 0,
+          "updated": 13
+        }
+      },
+      "sqlserver_seconds": 0.032832560000315425,
+      "spark_seconds": 11.365245021000192,
+      "comparisons": [
+        {
+          "name": "dbo.claim_classification",
+          "key": [
+            "claim_id"
+          ],
+          "ignored": [
+            "classified_at"
+          ],
+          "sqlserver_rows": 404,
+          "spark_rows": 404,
+          "only_in_sqlserver": [],
+          "only_in_spark": [],
+          "value_diffs": [],
+          "only_in_sqlserver_count": 0,
+          "only_in_spark_count": 0,
+          "value_diff_count": 0,
+          "rows_with_value_diffs": 0,
+          "column_mismatch": [],
+          "match": true,
+          "columns": [
+            {
+              "name": "claim_id",
+              "sqlserver": "5d0244a56880",
+              "spark": "5d0244a56880",
+              "match": true
+            },
+            {
+              "name": "dispense_id",
+              "sqlserver": "453c5545c7f2",
+              "spark": "453c5545c7f2",
+              "match": true
+            },
+            {
+              "name": "submitted_date",
+              "sqlserver": "1ab48d7ca81b",
+              "spark": "1ab48d7ca81b",
+              "match": true
+            },
+            {
+              "name": "payer_type",
+              "sqlserver": "558665f54721",
+              "spark": "558665f54721",
+              "match": true
+            },
+            {
+              "name": "coverage_segment",
+              "sqlserver": "b47622a98054",
+              "spark": "b47622a98054",
+              "match": true
+            },
+            {
+              "name": "claim_outcome",
+              "sqlserver": "04a88a97a50c",
+              "spark": "04a88a97a50c",
+              "match": true
+            },
+            {
+              "name": "copay_tier",
+              "sqlserver": "4851d72b989d",
+              "spark": "4851d72b989d",
+              "match": true
+            },
+            {
+              "name": "paid_ratio",
+              "sqlserver": "31d29f252680",
+              "spark": "31d29f252680",
+              "match": true
+            },
+            {
+              "name": "follow_up_priority",
+              "sqlserver": "3b1a1ac468e6",
+              "spark": "3b1a1ac468e6",
+              "match": true
+            },
+            {
+              "name": "high_oop_flag",
+              "sqlserver": "606460057e16",
+              "spark": "606460057e16",
+              "match": true
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "procedure": "usp_shipment_sla_report",
+      "params": {
+        "week_start": "2024-03-04"
+      },
+      "status": "error",
+      "reason": "[INVALID_EXTRACT_FIELD] Cannot extract `WEEKISO` from \"CAST(2024-03-04 AS DATE)\". SQLSTATE: 42601; line 21 pos 2",
+      "changes": {},
+      "sqlserver_seconds": null,
+      "spark_seconds": null,
+      "comparisons": []
+    },
+    {
+      "procedure": "usp_standardize_patient_contact",
+      "params": {},
+      "status": "not_run",
+      "reason": "1 manual step(s) must be converted by a person first",
+      "changes": {},
+      "sqlserver_seconds": null,
+      "spark_seconds": null,
+      "comparisons": []
+    },
+    {
+      "procedure": "usp_update_shipment_status",
+      "params": {
+        "as_of": "2024-03-12 18:00:00"
+      },
+      "status": "not_run",
+      "reason": "3 manual step(s) must be converted by a person first",
+      "changes": {},
+      "sqlserver_seconds": null,
+      "spark_seconds": null,
+      "comparisons": []
+    },
+    {
+      "procedure": "usp_rebuild_prescriber_rollup",
+      "params": {
+        "period_month": "2024-03-01"
+      },
+      "status": "not_run",
+      "reason": "2 manual step(s) must be converted by a person first",
+      "changes": {},
+      "sqlserver_seconds": null,
+      "spark_seconds": null,
+      "comparisons": []
+    },
+    {
+      "procedure": "usp_recalc_reorder_points_cursor",
+      "params": {
+        "as_of_date": "2024-03-31"
+      },
+      "status": "not_run",
+      "reason": "1 manual step(s) must be converted by a person first",
+      "changes": {},
+      "sqlserver_seconds": null,
+      "spark_seconds": null,
+      "comparisons": []
+    },
+    {
+      "procedure": "usp_export_dispenses_by_region_dynamic",
+      "params": {
+        "from_date": "2024-03-01",
+        "to_date": "2024-03-31"
+      },
+      "status": "not_run",
+      "reason": "1 manual step(s) must be converted by a person first",
+      "changes": {},
+      "sqlserver_seconds": null,
+      "spark_seconds": null,
+      "comparisons": []
+    },
+    {
+      "procedure": "usp_close_month_end",
+      "params": {
+        "period_month": "2024-03-01"
+      },
+      "status": "not_run",
+      "reason": "1 manual step(s) must be converted by a person first",
+      "changes": {},
+      "sqlserver_seconds": null,
+      "spark_seconds": null,
+      "comparisons": []
+    }
+  ]
+}
