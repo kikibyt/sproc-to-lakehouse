@@ -2,8 +2,8 @@
 
 Migrate T-SQL stored procedures to Databricks (PySpark/dbt) with automated parity testing.
 
-> **Status: work in progress (Phase 2 of 5).** Parsing, analysis and code generation work and
-> are tested; reports, a CLI and parity testing are still to come. All sample code and data
+> **Status: work in progress (Phase 3 of 5).** Parsing, analysis, code generation, reports and
+> the CLI work and are tested; parity testing is still to come. All sample code and data
 > in this repository are **synthetic** (a fictional specialty pharmacy).
 
 ## What works today
@@ -42,11 +42,19 @@ pytest
 ruff check .
 ```
 
-Generate the dbt project and notebooks for the samples into `output\` (a CLI comes in Phase 3):
+Convert the samples (dbt project, notebooks and reports go to `output\`):
 
 ```powershell
-python -c "from sproc_to_lakehouse.codegen import generate_all; generate_all('samples/tsql', 'samples/ddl', 'output')"
+python -m sproc_to_lakehouse convert samples\tsql --target both --out output
 ```
+
+- `--target dbt|notebook|both` chooses what to generate. Reports are always written to
+  `output\reports\`: one Markdown and one JSON file per procedure, plus `summary.md`
+  and `summary.json`.
+- `--ddl <files or folders>` loads table definitions; without it, a `ddl` folder next to the
+  source folder is used if present (`--no-ddl` skips it). Some checks need column types.
+- `python -m sproc_to_lakehouse analyze samples\tsql` only classifies, and
+  `--fail-on needs_review` makes either command exit with code 2 for use in CI.
 
 The Spark validation tests are skipped unless PySpark 4 and Java 17+ are installed
 (`pip install -e ".[dev,spark]"`); they are intended for Linux/CI.
