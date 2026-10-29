@@ -1,0 +1,660 @@
+{
+  "tool": {
+    "sproc_to_lakehouse": "0.1.0",
+    "sqlglot": "30.25.0"
+  },
+  "target": "both",
+  "ddl_loaded": true,
+  "totals": {
+    "procedures": 12,
+    "fully_converted": 6,
+    "partially_converted": 6,
+    "manual_steps": 9,
+    "findings": 148,
+    "verdicts": {
+      "auto": 0,
+      "auto_with_note": 6,
+      "needs_review": 6
+    }
+  },
+  "procedures": [
+    {
+      "name": "usp_load_daily_dispense_summary",
+      "source_file": "samples/tsql/01_usp_load_daily_dispense_summary.sql",
+      "verdict": "auto_with_note",
+      "conversion": "full",
+      "counts": {
+        "auto": 5,
+        "auto_with_note": 3,
+        "needs_review": 0
+      },
+      "manual_steps": 0,
+      "rewrites_applied": [],
+      "blocking_rules": []
+    },
+    {
+      "name": "usp_build_monthly_inventory_snapshot",
+      "source_file": "samples/tsql/02_usp_build_monthly_inventory_snapshot.sql",
+      "verdict": "auto_with_note",
+      "conversion": "full",
+      "counts": {
+        "auto": 11,
+        "auto_with_note": 3,
+        "needs_review": 0
+      },
+      "manual_steps": 0,
+      "rewrites_applied": [
+        "transient_table_to_cte",
+        "update_from_to_merge"
+      ],
+      "blocking_rules": []
+    },
+    {
+      "name": "usp_upsert_patient_enrollment",
+      "source_file": "samples/tsql/03_usp_upsert_patient_enrollment.sql",
+      "verdict": "auto_with_note",
+      "conversion": "full",
+      "counts": {
+        "auto": 5,
+        "auto_with_note": 7,
+        "needs_review": 0
+      },
+      "manual_steps": 0,
+      "rewrites_applied": [
+        "bit_to_boolean",
+        "compact_date_literal",
+        "try_convert_safe_parse"
+      ],
+      "blocking_rules": []
+    },
+    {
+      "name": "usp_calc_refill_gaps",
+      "source_file": "samples/tsql/04_usp_calc_refill_gaps.sql",
+      "verdict": "auto_with_note",
+      "conversion": "full",
+      "counts": {
+        "auto": 7,
+        "auto_with_note": 4,
+        "needs_review": 0
+      },
+      "manual_steps": 0,
+      "rewrites_applied": [
+        "bit_to_boolean"
+      ],
+      "blocking_rules": []
+    },
+    {
+      "name": "usp_classify_payer_claims",
+      "source_file": "samples/tsql/05_usp_classify_payer_claims.sql",
+      "verdict": "auto_with_note",
+      "conversion": "full",
+      "counts": {
+        "auto": 3,
+        "auto_with_note": 2,
+        "needs_review": 0
+      },
+      "manual_steps": 0,
+      "rewrites_applied": [
+        "bit_to_boolean"
+      ],
+      "blocking_rules": []
+    },
+    {
+      "name": "usp_standardize_patient_contact",
+      "source_file": "samples/tsql/06_usp_standardize_patient_contact.sql",
+      "verdict": "needs_review",
+      "conversion": "partial",
+      "counts": {
+        "auto": 5,
+        "auto_with_note": 3,
+        "needs_review": 1
+      },
+      "manual_steps": 1,
+      "rewrites_applied": [],
+      "blocking_rules": [
+        "EX013"
+      ]
+    },
+    {
+      "name": "usp_shipment_sla_report",
+      "source_file": "samples/tsql/07_usp_shipment_sla_report.sql",
+      "verdict": "auto_with_note",
+      "conversion": "full",
+      "counts": {
+        "auto": 7,
+        "auto_with_note": 5,
+        "needs_review": 0
+      },
+      "manual_steps": 0,
+      "rewrites_applied": [
+        "bit_to_boolean",
+        "iso_week_extract",
+        "transient_table_to_cte"
+      ],
+      "blocking_rules": []
+    },
+    {
+      "name": "usp_update_shipment_status",
+      "source_file": "samples/tsql/08_usp_update_shipment_status.sql",
+      "verdict": "needs_review",
+      "conversion": "partial",
+      "counts": {
+        "auto": 4,
+        "auto_with_note": 5,
+        "needs_review": 3
+      },
+      "manual_steps": 3,
+      "rewrites_applied": [
+        "update_from_to_merge"
+      ],
+      "blocking_rules": [
+        "ST005"
+      ]
+    },
+    {
+      "name": "usp_rebuild_prescriber_rollup",
+      "source_file": "samples/tsql/09_usp_rebuild_prescriber_rollup.sql",
+      "verdict": "needs_review",
+      "conversion": "partial",
+      "counts": {
+        "auto": 9,
+        "auto_with_note": 2,
+        "needs_review": 1
+      },
+      "manual_steps": 2,
+      "rewrites_applied": [],
+      "blocking_rules": [
+        "ST001"
+      ]
+    },
+    {
+      "name": "usp_recalc_reorder_points_cursor",
+      "source_file": "samples/tsql/10_usp_recalc_reorder_points_cursor.sql",
+      "verdict": "needs_review",
+      "conversion": "partial",
+      "counts": {
+        "auto": 7,
+        "auto_with_note": 9,
+        "needs_review": 4
+      },
+      "manual_steps": 1,
+      "rewrites_applied": [],
+      "blocking_rules": [
+        "CF001",
+        "CF002",
+        "CF008",
+        "ST005"
+      ]
+    },
+    {
+      "name": "usp_export_dispenses_by_region_dynamic",
+      "source_file": "samples/tsql/11_usp_export_dispenses_by_region_dynamic.sql",
+      "verdict": "needs_review",
+      "conversion": "partial",
+      "counts": {
+        "auto": 3,
+        "auto_with_note": 4,
+        "needs_review": 2
+      },
+      "manual_steps": 1,
+      "rewrites_applied": [],
+      "blocking_rules": [
+        "CF005",
+        "EX013"
+      ]
+    },
+    {
+      "name": "usp_close_month_end",
+      "source_file": "samples/tsql/12_usp_close_month_end.sql",
+      "verdict": "needs_review",
+      "conversion": "partial",
+      "counts": {
+        "auto": 6,
+        "auto_with_note": 6,
+        "needs_review": 12
+      },
+      "manual_steps": 1,
+      "rewrites_applied": [],
+      "blocking_rules": [
+        "CF002",
+        "CF003",
+        "CF004",
+        "CF007",
+        "CF008",
+        "DM003",
+        "DM004",
+        "ST005",
+        "ST007"
+      ]
+    }
+  ],
+  "rules": [
+    {
+      "rule_id": "CF001",
+      "construct": "cursor",
+      "summary": "Row-by-row cursor processing",
+      "findings": 1,
+      "procedures": 1,
+      "severities": [
+        "needs_review"
+      ]
+    },
+    {
+      "rule_id": "CF002",
+      "construct": "while_loop",
+      "summary": "WHILE loop",
+      "findings": 2,
+      "procedures": 2,
+      "severities": [
+        "needs_review"
+      ]
+    },
+    {
+      "rule_id": "CF003",
+      "construct": "try_catch",
+      "summary": "TRY/CATCH error handling",
+      "findings": 1,
+      "procedures": 1,
+      "severities": [
+        "needs_review"
+      ]
+    },
+    {
+      "rule_id": "CF004",
+      "construct": "transaction",
+      "summary": "Explicit multi-statement transaction",
+      "findings": 1,
+      "procedures": 1,
+      "severities": [
+        "needs_review"
+      ]
+    },
+    {
+      "rule_id": "CF005",
+      "construct": "dynamic_sql",
+      "summary": "Dynamic SQL execution",
+      "findings": 1,
+      "procedures": 1,
+      "severities": [
+        "needs_review"
+      ]
+    },
+    {
+      "rule_id": "CF007",
+      "construct": "raise_error",
+      "summary": "THROW / RAISERROR",
+      "findings": 2,
+      "procedures": 1,
+      "severities": [
+        "needs_review"
+      ]
+    },
+    {
+      "rule_id": "CF008",
+      "construct": "if_branch",
+      "summary": "IF / ELSE branching",
+      "findings": 4,
+      "procedures": 3,
+      "severities": [
+        "auto",
+        "needs_review"
+      ]
+    },
+    {
+      "rule_id": "DM001",
+      "construct": "merge",
+      "summary": "MERGE upsert",
+      "findings": 1,
+      "procedures": 1,
+      "severities": [
+        "auto_with_note"
+      ]
+    },
+    {
+      "rule_id": "DM002",
+      "construct": "update_with_join",
+      "summary": "UPDATE/DELETE with FROM ... JOIN",
+      "findings": 5,
+      "procedures": 3,
+      "severities": [
+        "auto_with_note"
+      ]
+    },
+    {
+      "rule_id": "DM003",
+      "construct": "top_in_dml",
+      "summary": "UPDATE/DELETE TOP (n)",
+      "findings": 1,
+      "procedures": 1,
+      "severities": [
+        "needs_review"
+      ]
+    },
+    {
+      "rule_id": "DM004",
+      "construct": "output_clause",
+      "summary": "OUTPUT clause on DML",
+      "findings": 1,
+      "procedures": 1,
+      "severities": [
+        "needs_review"
+      ]
+    },
+    {
+      "rule_id": "DM006",
+      "construct": "truncate",
+      "summary": "TRUNCATE TABLE",
+      "findings": 2,
+      "procedures": 2,
+      "severities": [
+        "auto"
+      ]
+    },
+    {
+      "rule_id": "DM007",
+      "construct": "result_set",
+      "summary": "SELECT returning rows to the caller",
+      "findings": 1,
+      "procedures": 1,
+      "severities": [
+        "auto_with_note"
+      ]
+    },
+    {
+      "rule_id": "EX001",
+      "construct": "cte",
+      "summary": "Common table expressions (WITH)",
+      "findings": 6,
+      "procedures": 6,
+      "severities": [
+        "auto"
+      ]
+    },
+    {
+      "rule_id": "EX002",
+      "construct": "window_function",
+      "summary": "Window functions (OVER ...)",
+      "findings": 6,
+      "procedures": 5,
+      "severities": [
+        "auto"
+      ]
+    },
+    {
+      "rule_id": "EX003",
+      "construct": "case_expression",
+      "summary": "CASE / IIF",
+      "findings": 11,
+      "procedures": 9,
+      "severities": [
+        "auto"
+      ]
+    },
+    {
+      "rule_id": "EX004",
+      "construct": "date_function",
+      "summary": "Date arithmetic (DATEADD, EOMONTH, DATEFROMPARTS, ...)",
+      "findings": 16,
+      "procedures": 7,
+      "severities": [
+        "auto"
+      ]
+    },
+    {
+      "rule_id": "EX005",
+      "construct": "datediff",
+      "summary": "DATEDIFF",
+      "findings": 2,
+      "procedures": 2,
+      "severities": [
+        "auto_with_note"
+      ]
+    },
+    {
+      "rule_id": "EX006",
+      "construct": "datepart_week",
+      "summary": "DATEPART week / weekday",
+      "findings": 1,
+      "procedures": 1,
+      "severities": [
+        "auto_with_note"
+      ]
+    },
+    {
+      "rule_id": "EX007",
+      "construct": "current_time",
+      "summary": "GETDATE / SYSDATETIME",
+      "findings": 14,
+      "procedures": 8,
+      "severities": [
+        "auto_with_note"
+      ]
+    },
+    {
+      "rule_id": "EX008",
+      "construct": "convert",
+      "summary": "CONVERT / TRY_CONVERT",
+      "findings": 3,
+      "procedures": 2,
+      "severities": [
+        "auto_with_note"
+      ]
+    },
+    {
+      "rule_id": "EX009",
+      "construct": "isnull",
+      "summary": "ISNULL",
+      "findings": 8,
+      "procedures": 7,
+      "severities": [
+        "auto_with_note"
+      ]
+    },
+    {
+      "rule_id": "EX010",
+      "construct": "string_concat_plus",
+      "summary": "String concatenation with +",
+      "findings": 2,
+      "procedures": 2,
+      "severities": [
+        "auto_with_note"
+      ]
+    },
+    {
+      "rule_id": "EX011",
+      "construct": "string_function",
+      "summary": "String functions",
+      "findings": 3,
+      "procedures": 3,
+      "severities": [
+        "auto"
+      ]
+    },
+    {
+      "rule_id": "EX012",
+      "construct": "len_trailing_spaces",
+      "summary": "LEN",
+      "findings": 1,
+      "procedures": 1,
+      "severities": [
+        "auto_with_note"
+      ]
+    },
+    {
+      "rule_id": "EX013",
+      "construct": "unsupported_function",
+      "summary": "Function without a Databricks equivalent",
+      "findings": 2,
+      "procedures": 2,
+      "severities": [
+        "needs_review"
+      ]
+    },
+    {
+      "rule_id": "EX014",
+      "construct": "string_agg",
+      "summary": "STRING_AGG",
+      "findings": 1,
+      "procedures": 1,
+      "severities": [
+        "auto_with_note"
+      ]
+    },
+    {
+      "rule_id": "EX015",
+      "construct": "bit_column",
+      "summary": "BIT column used as 0/1",
+      "findings": 9,
+      "procedures": 7,
+      "severities": [
+        "auto_with_note"
+      ]
+    },
+    {
+      "rule_id": "EX016",
+      "construct": "compact_date_literal",
+      "summary": "'yyyymmdd' string used as a date",
+      "findings": 1,
+      "procedures": 1,
+      "severities": [
+        "auto_with_note"
+      ]
+    },
+    {
+      "rule_id": "ST001",
+      "construct": "temp_table",
+      "summary": "Temp table (#name) used as intermediate storage",
+      "findings": 2,
+      "procedures": 2,
+      "severities": [
+        "auto",
+        "needs_review"
+      ]
+    },
+    {
+      "rule_id": "ST002",
+      "construct": "table_variable",
+      "summary": "Table variable (@name TABLE) used as intermediate storage",
+      "findings": 1,
+      "procedures": 1,
+      "severities": [
+        "auto"
+      ]
+    },
+    {
+      "rule_id": "ST003",
+      "construct": "scalar_from_query",
+      "summary": "Scalar variable assigned from a query",
+      "findings": 3,
+      "procedures": 2,
+      "severities": [
+        "auto_with_note"
+      ]
+    },
+    {
+      "rule_id": "ST004",
+      "construct": "parameters",
+      "summary": "Procedure parameters",
+      "findings": 11,
+      "procedures": 11,
+      "severities": [
+        "auto"
+      ]
+    },
+    {
+      "rule_id": "ST005",
+      "construct": "system_variable",
+      "summary": "@@ system variables",
+      "findings": 6,
+      "procedures": 3,
+      "severities": [
+        "needs_review"
+      ]
+    },
+    {
+      "rule_id": "ST006",
+      "construct": "session_option",
+      "summary": "SET session options",
+      "findings": 13,
+      "procedures": 12,
+      "severities": [
+        "auto",
+        "auto_with_note"
+      ]
+    },
+    {
+      "rule_id": "ST007",
+      "construct": "identity_capture",
+      "summary": "SCOPE_IDENTITY / @@IDENTITY",
+      "findings": 1,
+      "procedures": 1,
+      "severities": [
+        "needs_review"
+      ]
+    },
+    {
+      "rule_id": "ST008",
+      "construct": "temp_cleanup",
+      "summary": "Temp table cleanup (DROP TABLE #t)",
+      "findings": 2,
+      "procedures": 2,
+      "severities": [
+        "auto"
+      ]
+    }
+  ],
+  "rewrites": [
+    {
+      "name": "bit_to_boolean",
+      "description": "BIT columns are BOOLEAN on Databricks: 0/1 comparisons become FALSE/TRUE and values written into them are cast to BOOLEAN (needs DDL).",
+      "procedures": [
+        "usp_upsert_patient_enrollment",
+        "usp_calc_refill_gaps",
+        "usp_classify_payer_claims",
+        "usp_shipment_sla_report"
+      ]
+    },
+    {
+      "name": "compact_date_literal",
+      "description": "'yyyymmdd' strings compared with dates become DATE literals; Spark cannot cast them implicitly (needs DDL).",
+      "procedures": [
+        "usp_upsert_patient_enrollment"
+      ]
+    },
+    {
+      "name": "iso_week_extract",
+      "description": "EXTRACT(WEEKISO ...) becomes EXTRACT(WEEK ...), the Databricks ISO 8601 field.",
+      "procedures": [
+        "usp_shipment_sla_report"
+      ]
+    },
+    {
+      "name": "plus_to_concat",
+      "description": "String '+' becomes CONCAT; sqlglot leaves '+', which Databricks treats as numeric addition.",
+      "procedures": []
+    },
+    {
+      "name": "transient_table_to_cte",
+      "description": "Temp tables / table variables populated without later mutation become CTEs (or intermediate models when read more than once).",
+      "procedures": [
+        "usp_build_monthly_inventory_snapshot",
+        "usp_shipment_sla_report"
+      ]
+    },
+    {
+      "name": "try_convert_safe_parse",
+      "description": "TRY_CONVERT with a style becomes CAST(TRY_TO_TIMESTAMP(...)); sqlglot emits TO_DATE/TO_TIMESTAMP, which raise on bad input.",
+      "procedures": [
+        "usp_upsert_patient_enrollment"
+      ]
+    },
+    {
+      "name": "update_from_to_merge",
+      "description": "UPDATE/DELETE ... FROM ... JOIN becomes MERGE INTO, because Delta UPDATE/DELETE has no FROM clause.",
+      "procedures": [
+        "usp_build_monthly_inventory_snapshot",
+        "usp_update_shipment_status"
+      ]
+    }
+  ]
+}

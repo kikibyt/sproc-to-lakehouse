@@ -1,0 +1,110 @@
+{
+  "procedure": "dbo.usp_classify_payer_claims",
+  "name": "usp_classify_payer_claims",
+  "source_file": "samples/tsql/05_usp_classify_payer_claims.sql",
+  "parameters": [
+    {
+      "name": "@from_date",
+      "type": "DATE",
+      "default": null,
+      "output": false
+    },
+    {
+      "name": "@to_date",
+      "type": "DATE",
+      "default": null,
+      "output": false
+    }
+  ],
+  "verdict": "auto_with_note",
+  "conversion": "full",
+  "counts": {
+    "auto": 3,
+    "auto_with_note": 2,
+    "needs_review": 0
+  },
+  "manual_steps": 0,
+  "ddl_loaded": true,
+  "rewrites_applied": [
+    "bit_to_boolean"
+  ],
+  "findings": [
+    {
+      "rule_id": "ST004",
+      "construct": "parameters",
+      "severity": "auto",
+      "line": 10,
+      "message": "2 input parameter(s) become dbt vars and notebook widgets.",
+      "snippet": "@from_date, @to_date",
+      "rewrite": null
+    },
+    {
+      "rule_id": "ST006",
+      "construct": "session_option",
+      "severity": "auto",
+      "line": 15,
+      "message": "SET NOCOUNT is a SQL Server session setting with no Databricks equivalent; dropped.",
+      "snippet": "SET NOCOUNT ON",
+      "rewrite": null
+    },
+    {
+      "rule_id": "EX003",
+      "construct": "case_expression",
+      "severity": "auto",
+      "line": 20,
+      "message": "CASE and IIF translate directly (IIF becomes IF).",
+      "snippet": "INSERT INTO dbo.claim_classification ( claim_id, dispense_id, submitted_date, payer_type, coverag...",
+      "rewrite": null
+    },
+    {
+      "rule_id": "EX007",
+      "construct": "current_time",
+      "severity": "auto_with_note",
+      "line": 20,
+      "message": "Current time: SQL Server returns the server's local time; Databricks returns the session time zone (UTC unless configured).",
+      "snippet": "INSERT INTO dbo.claim_classification ( claim_id, dispense_id, submitted_date, payer_type, coverag...",
+      "rewrite": null
+    },
+    {
+      "rule_id": "EX015",
+      "construct": "bit_column",
+      "severity": "auto_with_note",
+      "line": 20,
+      "message": "BIT column compared with or assigned 0/1. On Databricks BIT is BOOLEAN and ANSI mode rejects BOOLEAN = INT; rewritten to TRUE/FALSE and CAST(... AS BOOLEAN).",
+      "snippet": "INSERT INTO dbo.claim_classification ( claim_id, dispense_id, submitted_date, payer_type, coverag...",
+      "rewrite": "bit_to_boolean"
+    }
+  ],
+  "steps": [
+    {
+      "number": 1,
+      "kind": "write",
+      "title": "delete dbo.claim_classification",
+      "line": 17,
+      "rewrites": [],
+      "reasons": [],
+      "source_sql": null
+    },
+    {
+      "number": 2,
+      "kind": "write",
+      "title": "insert dbo.claim_classification",
+      "line": 20,
+      "rewrites": [
+        "bit_to_boolean"
+      ],
+      "reasons": [],
+      "source_sql": null
+    }
+  ],
+  "dropped": [
+    {
+      "line": 15,
+      "reason": "session option with no Databricks equivalent"
+    }
+  ],
+  "outputs": [
+    "dbt/models/usp_classify_payer_claims/claim_classification.sql",
+    "notebooks/usp_classify_payer_claims.py"
+  ]
+}

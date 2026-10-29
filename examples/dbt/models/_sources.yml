@@ -1,0 +1,78 @@
+version: 2
+sources:
+- name: dbo
+  schema: '{{ var(''source_schema_dbo'', ''dbo'') }}'
+  tables:
+  - name: carrier_tracking_events
+    columns:
+    - name: event_id
+      data_tests:
+      - not_null
+      - unique
+  - name: claims
+    columns:
+    - name: claim_id
+      data_tests:
+      - not_null
+      - unique
+  - name: dispenses
+    columns:
+    - name: dispense_id
+      data_tests:
+      - not_null
+      - unique
+  - name: etl_run_log
+    columns:
+    - name: run_id
+      data_tests:
+      - not_null
+      - unique
+  - name: inventory_movements
+    columns:
+    - name: movement_id
+      data_tests:
+      - not_null
+      - unique
+  - name: patient_contact_clean
+    columns:
+    - name: patient_id
+      data_tests:
+      - not_null
+      - unique
+  - name: payers
+    columns:
+    - name: payer_id
+      data_tests:
+      - not_null
+      - unique
+  - name: prescriber_monthly_rollup
+    columns:
+    - name: period_month
+      data_tests: &id001
+      - not_null
+    - name: prescriber_id
+      data_tests: *id001
+  - name: products
+    columns:
+    - name: product_id
+      data_tests:
+      - not_null
+      - unique
+  - name: shipments
+    columns:
+    - name: shipment_id
+      data_tests:
+      - not_null
+      - unique
+  - name: sites
+    columns:
+    - name: site_id
+      data_tests:
+      - not_null
+      - unique
+  - name: stg_patient_enrollments
+    columns:
+    - name: stg_row_id
+      data_tests:
+      - not_null
+      - unique

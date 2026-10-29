@@ -198,6 +198,47 @@ def cmd_parity(args: argparse.Namespace, out) -> int:
     return EXIT_THRESHOLD if failed else EXIT_OK
 
 
+def cmd_check(args: argparse.Namespace, out) -> int:
+    from sproc_to_lakehouse.validation.spark_check import (
+        check_dbt_project,
+        check_plan,
+        check_report_markdown,
+        create_tables,
+        spark_session,
+    )
+
+    files = _sql_files(args.source)
+    catalog = _catalog(args, out)
+    if catalog is None:
+        raise CliError("the Spark check needs the table DDL (--ddl)")
+    plans = _plans(files, catalog)
+    spark = spark_session()
+    spark.sparkContext.setLogLevel("OFF")
+    create_tables(spark, catalog)
+    results = [r for plan in plans for r in check_plan(spark, plan)]
+    dbt_results = check_dbt_project(spark, generate_dbt_project(plans, catalog))
+    text = check_report_markdown(results, dbt_results, spark.version)
+    args.out.parent.mkdir(parents=True, exist_ok=True)
+    args.out.write_text(text, encoding="utf-8", newline="\n")
+    failed = [r for r in [*results, *dbt_results] if not r.ok]
+    for r in failed:
+        print(f"FAILED {r.procedure} line {r.line} {r.step}: {r.error}", file=out)
+    for line in text.splitlines():
+        if line.startswith("- "):
+            print(line[2:], file=out)
+    print(f"Report: {args.out}", file=out)
+    return EXIT_THRESHOLD if failed else EXIT_OK
+
+
+def cmd_rules(args: argparse.Namespace, out) -> int:
+    from sproc_to_lakehouse.reports.markdown import rules_markdown
+
+    args.out.parent.mkdir(parents=True, exist_ok=True)
+    args.out.write_text(rules_markdown(), encoding="utf-8", newline="\n")
+    print(f"Wrote {args.out}", file=out)
+    return EXIT_OK
+
+
 def _guess_ddl(args: argparse.Namespace) -> Path:
     first = args.source[0]
     return (first if first.is_dir() else first.parent).parent / "ddl"
@@ -266,6 +307,15 @@ def build_parser() -> argparse.ArgumentParser:
         help="ablation: turn off the targeted rewrites to measure what they are worth",
     )
     parity.set_defaults(func=cmd_parity)
+
+    rules = sub.add_parser("rules", help="write the rule catalogue (Markdown)")
+    rules.add_argument("--out", type=Path, default=Path("docs/rules.md"))
+    rules.set_defaults(func=cmd_rules)
+
+    check = sub.add_parser("check", help="check generated SQL against a local Apache Spark")
+    common(check)
+    check.add_argument("--out", type=Path, default=Path("output/spark_check.md"))
+    check.set_defaults(func=cmd_check)
 
     analyze_cmd = sub.add_parser("analyze", help="classify constructs without generating code")
     common(analyze_cmd)

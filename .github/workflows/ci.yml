@@ -1,0 +1,97 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  lint-and-test:
+    name: Lint and unit tests (Python ${{ matrix.python }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python: ["3.10", "3.13"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+          cache: pip
+      - run: pip install -e ".[dev]"
+      - run: ruff check .
+      - run: ruff format --check .
+      # Spark and parity tests skip themselves here; the jobs below run them.
+      - run: pytest
+
+  spark-check:
+    name: Generated SQL on Apache Spark
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+      - run: pip install -e ".[dev,spark]"
+      - run: pytest tests/test_spark_validation.py
+      - run: python -m sproc_to_lakehouse check samples/tsql --out output/spark_check.md
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: spark-check
+          path: output/spark_check.md
+
+  parity:
+    name: Parity (SQL Server vs Spark + Delta Lake)
+    runs-on: ubuntu-latest
+    env:
+      # Throwaway password for the CI-only container below.
+      SPROC2LH_MSSQL_PASSWORD: Ci_Parity_Only_2024!
+      SPROC2LH_MSSQL_HOST: localhost
+      SPROC2LH_MSSQL_PORT: "1433"
+    services:
+      sqlserver:
+        image: mcr.microsoft.com/mssql/server:2022-latest
+        env:
+          ACCEPT_EULA: "Y"
+          MSSQL_PID: Developer
+          MSSQL_SA_PASSWORD: Ci_Parity_Only_2024!
+        ports:
+          - 1433:1433
+        options: >-
+          --health-cmd "/opt/mssql-tools18/bin/sqlcmd -C -S localhost -U sa -P 'Ci_Parity_Only_2024!' -Q 'SELECT 1' || exit 1"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+      - run: pip install -e ".[dev,parity]"
+      - run: pytest tests/test_parity_integration.py
+      - name: Parity report
+        run: |
+          python -m sproc_to_lakehouse parity samples/tsql \
+            --data samples/parity/data.yml --scenarios samples/parity/scenarios.yml \
+            --out output/parity
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: parity-report
+          path: output/parity

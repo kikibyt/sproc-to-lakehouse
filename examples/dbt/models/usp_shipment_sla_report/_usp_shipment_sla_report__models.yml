@@ -1,0 +1,4 @@
+version: 2
+models:
+- name: shipment_sla_report
+  description: Converted from dbo.usp_shipment_sla_report (T-SQL line 38).

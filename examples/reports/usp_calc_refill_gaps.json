@@ -1,0 +1,164 @@
+{
+  "procedure": "dbo.usp_calc_refill_gaps",
+  "name": "usp_calc_refill_gaps",
+  "source_file": "samples/tsql/04_usp_calc_refill_gaps.sql",
+  "parameters": [
+    {
+      "name": "@as_of_date",
+      "type": "DATE",
+      "default": null,
+      "output": false
+    },
+    {
+      "name": "@gap_threshold_days",
+      "type": "INT",
+      "default": "7",
+      "output": false
+    }
+  ],
+  "verdict": "auto_with_note",
+  "conversion": "full",
+  "counts": {
+    "auto": 7,
+    "auto_with_note": 4,
+    "needs_review": 0
+  },
+  "manual_steps": 0,
+  "ddl_loaded": true,
+  "rewrites_applied": [
+    "bit_to_boolean"
+  ],
+  "findings": [
+    {
+      "rule_id": "ST004",
+      "construct": "parameters",
+      "severity": "auto",
+      "line": 9,
+      "message": "2 input parameter(s) become dbt vars and notebook widgets.",
+      "snippet": "@as_of_date, @gap_threshold_days",
+      "rewrite": null
+    },
+    {
+      "rule_id": "ST006",
+      "construct": "session_option",
+      "severity": "auto",
+      "line": 14,
+      "message": "SET NOCOUNT is a SQL Server session setting with no Databricks equivalent; dropped.",
+      "snippet": "SET NOCOUNT ON",
+      "rewrite": null
+    },
+    {
+      "rule_id": "DM006",
+      "construct": "truncate",
+      "severity": "auto",
+      "line": 16,
+      "message": "Full reload: becomes a table materialization (dbt) and DELETE FROM before the INSERT (notebook; open-source Delta has no TRUNCATE).",
+      "snippet": "TRUNCATE TABLE dbo.refill_gap_events",
+      "rewrite": null
+    },
+    {
+      "rule_id": "EX001",
+      "construct": "cte",
+      "severity": "auto",
+      "line": 18,
+      "message": "CTEs are supported natively.",
+      "snippet": "WITH fills AS ( SELECT d.patient_id, d.product_id, d.dispense_date, DATEADD(DAY, d.days_supply, d...",
+      "rewrite": null
+    },
+    {
+      "rule_id": "EX002",
+      "construct": "window_function",
+      "severity": "auto",
+      "line": 18,
+      "message": "Window functions and frames translate directly.",
+      "snippet": "WITH fills AS ( SELECT d.patient_id, d.product_id, d.dispense_date, DATEADD(DAY, d.days_supply, d...",
+      "rewrite": null
+    },
+    {
+      "rule_id": "EX003",
+      "construct": "case_expression",
+      "severity": "auto",
+      "line": 18,
+      "message": "CASE and IIF translate directly (IIF becomes IF).",
+      "snippet": "WITH fills AS ( SELECT d.patient_id, d.product_id, d.dispense_date, DATEADD(DAY, d.days_supply, d...",
+      "rewrite": null
+    },
+    {
+      "rule_id": "EX004",
+      "construct": "date_function",
+      "severity": "auto",
+      "line": 18,
+      "message": "Date functions map to Databricks equivalents (DATEADD, LAST_DAY, MAKE_DATE, ...).",
+      "snippet": "WITH fills AS ( SELECT d.patient_id, d.product_id, d.dispense_date, DATEADD(DAY, d.days_supply, d...",
+      "rewrite": null
+    },
+    {
+      "rule_id": "EX005",
+      "construct": "datediff",
+      "severity": "auto_with_note",
+      "line": 18,
+      "message": "DATEDIFF(DAY): SQL Server counts unit boundaries crossed, Databricks counts whole units elapsed. Identical for DATE inputs in days; can differ by one for datetimes with a time part or for larger units.",
+      "snippet": "WITH fills AS ( SELECT d.patient_id, d.product_id, d.dispense_date, DATEADD(DAY, d.days_supply, d...",
+      "rewrite": null
+    },
+    {
+      "rule_id": "EX007",
+      "construct": "current_time",
+      "severity": "auto_with_note",
+      "line": 18,
+      "message": "Current time: SQL Server returns the server's local time; Databricks returns the session time zone (UTC unless configured).",
+      "snippet": "WITH fills AS ( SELECT d.patient_id, d.product_id, d.dispense_date, DATEADD(DAY, d.days_supply, d...",
+      "rewrite": null
+    },
+    {
+      "rule_id": "EX009",
+      "construct": "isnull",
+      "severity": "auto_with_note",
+      "line": 18,
+      "message": "ISNULL becomes COALESCE. ISNULL returns the type of its first argument (and can truncate the fallback value); COALESCE uses type precedence.",
+      "snippet": "WITH fills AS ( SELECT d.patient_id, d.product_id, d.dispense_date, DATEADD(DAY, d.days_supply, d...",
+      "rewrite": null
+    },
+    {
+      "rule_id": "EX015",
+      "construct": "bit_column",
+      "severity": "auto_with_note",
+      "line": 18,
+      "message": "BIT column compared with or assigned 0/1. On Databricks BIT is BOOLEAN and ANSI mode rejects BOOLEAN = INT; rewritten to TRUE/FALSE and CAST(... AS BOOLEAN).",
+      "snippet": "WITH fills AS ( SELECT d.patient_id, d.product_id, d.dispense_date, DATEADD(DAY, d.days_supply, d...",
+      "rewrite": "bit_to_boolean"
+    }
+  ],
+  "steps": [
+    {
+      "number": 1,
+      "kind": "write",
+      "title": "truncate dbo.refill_gap_events",
+      "line": 16,
+      "rewrites": [],
+      "reasons": [],
+      "source_sql": null
+    },
+    {
+      "number": 2,
+      "kind": "write",
+      "title": "insert dbo.refill_gap_events",
+      "line": 18,
+      "rewrites": [
+        "bit_to_boolean"
+      ],
+      "reasons": [],
+      "source_sql": null
+    }
+  ],
+  "dropped": [
+    {
+      "line": 14,
+      "reason": "session option with no Databricks equivalent"
+    }
+  ],
+  "outputs": [
+    "dbt/models/usp_calc_refill_gaps/refill_gap_events.sql",
+    "notebooks/usp_calc_refill_gaps.py"
+  ]
+}

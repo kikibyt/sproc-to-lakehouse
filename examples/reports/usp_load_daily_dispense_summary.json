@@ -1,0 +1,136 @@
+{
+  "procedure": "dbo.usp_load_daily_dispense_summary",
+  "name": "usp_load_daily_dispense_summary",
+  "source_file": "samples/tsql/01_usp_load_daily_dispense_summary.sql",
+  "parameters": [
+    {
+      "name": "@run_date",
+      "type": "DATE",
+      "default": "NULL",
+      "output": false
+    }
+  ],
+  "verdict": "auto_with_note",
+  "conversion": "full",
+  "counts": {
+    "auto": 5,
+    "auto_with_note": 3,
+    "needs_review": 0
+  },
+  "manual_steps": 0,
+  "ddl_loaded": true,
+  "rewrites_applied": [],
+  "findings": [
+    {
+      "rule_id": "ST004",
+      "construct": "parameters",
+      "severity": "auto",
+      "line": 8,
+      "message": "1 input parameter(s) become dbt vars and notebook widgets.",
+      "snippet": "@run_date",
+      "rewrite": null
+    },
+    {
+      "rule_id": "ST006",
+      "construct": "session_option",
+      "severity": "auto",
+      "line": 12,
+      "message": "SET NOCOUNT is a SQL Server session setting with no Databricks equivalent; dropped.",
+      "snippet": "SET NOCOUNT ON",
+      "rewrite": null
+    },
+    {
+      "rule_id": "CF008",
+      "construct": "if_branch",
+      "severity": "auto",
+      "line": 15,
+      "message": "Parameter default (IF @p IS NULL SET @p = ...): folded into COALESCE(@p, ...).",
+      "snippet": "IF @run_date IS NULL",
+      "rewrite": null
+    },
+    {
+      "rule_id": "EX004",
+      "construct": "date_function",
+      "severity": "auto",
+      "line": 16,
+      "message": "Date functions map to Databricks equivalents (DATEADD, LAST_DAY, MAKE_DATE, ...).",
+      "snippet": "SET @run_date = CAST(DATEADD(DAY, -1, GETDATE()) AS DATE)",
+      "rewrite": null
+    },
+    {
+      "rule_id": "EX007",
+      "construct": "current_time",
+      "severity": "auto_with_note",
+      "line": 16,
+      "message": "Current time: SQL Server returns the server's local time; Databricks returns the session time zone (UTC unless configured).",
+      "snippet": "SET @run_date = CAST(DATEADD(DAY, -1, GETDATE()) AS DATE)",
+      "rewrite": null
+    },
+    {
+      "rule_id": "EX001",
+      "construct": "cte",
+      "severity": "auto",
+      "line": 22,
+      "message": "CTEs are supported natively.",
+      "snippet": "WITH dispensed AS ( SELECT d.dispense_date, d.patient_id, p.therapy_area, d.quantity, d.days_supp...",
+      "rewrite": null
+    },
+    {
+      "rule_id": "EX007",
+      "construct": "current_time",
+      "severity": "auto_with_note",
+      "line": 22,
+      "message": "Current time: SQL Server returns the server's local time; Databricks returns the session time zone (UTC unless configured).",
+      "snippet": "WITH dispensed AS ( SELECT d.dispense_date, d.patient_id, p.therapy_area, d.quantity, d.days_supp...",
+      "rewrite": null
+    },
+    {
+      "rule_id": "EX008",
+      "construct": "convert",
+      "severity": "auto_with_note",
+      "line": 56,
+      "message": "CONVERT style code is mapped to a Databricks format pattern; verify the output format on sample data.",
+      "snippet": "WITH dispensed AS ( SELECT d.dispense_date, d.patient_id, p.therapy_area, d.quantity, d.days_supp...",
+      "rewrite": null
+    }
+  ],
+  "steps": [
+    {
+      "number": 1,
+      "kind": "scalar",
+      "title": "load @run_date",
+      "line": 15,
+      "rewrites": [],
+      "reasons": [],
+      "source_sql": null
+    },
+    {
+      "number": 2,
+      "kind": "write",
+      "title": "delete dbo.daily_dispense_summary",
+      "line": 19,
+      "rewrites": [],
+      "reasons": [],
+      "source_sql": null
+    },
+    {
+      "number": 3,
+      "kind": "write",
+      "title": "insert dbo.daily_dispense_summary",
+      "line": 22,
+      "rewrites": [],
+      "reasons": [],
+      "source_sql": null
+    }
+  ],
+  "dropped": [
+    {
+      "line": 12,
+      "reason": "session option with no Databricks equivalent"
+    }
+  ],
+  "outputs": [
+    "dbt/models/usp_load_daily_dispense_summary/daily_dispense_summary.sql",
+    "notebooks/usp_load_daily_dispense_summary.py"
+  ]
+}

@@ -1,0 +1,235 @@
+{
+  "procedure": "dbo.usp_recalc_reorder_points_cursor",
+  "name": "usp_recalc_reorder_points_cursor",
+  "source_file": "samples/tsql/10_usp_recalc_reorder_points_cursor.sql",
+  "parameters": [
+    {
+      "name": "@as_of_date",
+      "type": "DATE",
+      "default": null,
+      "output": false
+    }
+  ],
+  "verdict": "needs_review",
+  "conversion": "partial",
+  "counts": {
+    "auto": 7,
+    "auto_with_note": 9,
+    "needs_review": 4
+  },
+  "manual_steps": 1,
+  "ddl_loaded": true,
+  "rewrites_applied": [],
+  "findings": [
+    {
+      "rule_id": "ST004",
+      "construct": "parameters",
+      "severity": "auto",
+      "line": 11,
+      "message": "1 input parameter(s) become dbt vars and notebook widgets.",
+      "snippet": "@as_of_date",
+      "rewrite": null
+    },
+    {
+      "rule_id": "ST006",
+      "construct": "session_option",
+      "severity": "auto",
+      "line": 15,
+      "message": "SET NOCOUNT is a SQL Server session setting with no Databricks equivalent; dropped.",
+      "snippet": "SET NOCOUNT ON",
+      "rewrite": null
+    },
+    {
+      "rule_id": "CF001",
+      "construct": "cursor",
+      "severity": "needs_review",
+      "line": 24,
+      "message": "Cursor loops process one row at a time. Spark has no cursors; the loop body must be re-expressed as set-based logic (joins, window functions, aggregates).",
+      "snippet": "DECLARE product_cursor CURSOR LOCAL FAST_FORWARD FOR SELECT p.product_id, p.lead_time_days, CASE ...",
+      "rewrite": null
+    },
+    {
+      "rule_id": "EX003",
+      "construct": "case_expression",
+      "severity": "auto",
+      "line": 24,
+      "message": "CASE and IIF translate directly (IIF becomes IF).",
+      "snippet": "DECLARE product_cursor CURSOR LOCAL FAST_FORWARD FOR SELECT p.product_id, p.lead_time_days, CASE ...",
+      "rewrite": null
+    },
+    {
+      "rule_id": "EX015",
+      "construct": "bit_column",
+      "severity": "auto_with_note",
+      "line": 24,
+      "message": "BIT column compared with or assigned 0/1. On Databricks BIT is BOOLEAN and ANSI mode rejects BOOLEAN = INT; rewritten to TRUE/FALSE and CAST(... AS BOOLEAN).",
+      "snippet": "DECLARE product_cursor CURSOR LOCAL FAST_FORWARD FOR SELECT p.product_id, p.lead_time_days, CASE ...",
+      "rewrite": "bit_to_boolean"
+    },
+    {
+      "rule_id": "CF002",
+      "construct": "while_loop",
+      "severity": "needs_review",
+      "line": 35,
+      "message": "Procedural loop. Its termination and per-iteration state cannot be translated mechanically; rewrite set-based or as a driver loop in Python.",
+      "snippet": "WHILE @@FETCH_STATUS = 0",
+      "rewrite": null
+    },
+    {
+      "rule_id": "ST005",
+      "construct": "system_variable",
+      "severity": "needs_review",
+      "line": 35,
+      "message": "@@FETCH_STATUS: Cursor loop state; it disappears once the cursor is rewritten set-based.",
+      "snippet": "@@FETCH_STATUS = 0",
+      "rewrite": null
+    },
+    {
+      "rule_id": "EX004",
+      "construct": "date_function",
+      "severity": "auto",
+      "line": 37,
+      "message": "Date functions map to Databricks equivalents (DATEADD, LAST_DAY, MAKE_DATE, ...).",
+      "snippet": "SELECT @avg_daily_units = ISNULL(SUM(d.quantity), 0) / 90.0 FROM dbo.dispenses AS d WHERE d.produ...",
+      "rewrite": null
+    },
+    {
+      "rule_id": "EX009",
+      "construct": "isnull",
+      "severity": "auto_with_note",
+      "line": 37,
+      "message": "ISNULL becomes COALESCE. ISNULL returns the type of its first argument (and can truncate the fallback value); COALESCE uses type precedence.",
+      "snippet": "SELECT @avg_daily_units = ISNULL(SUM(d.quantity), 0) / 90.0 FROM dbo.dispenses AS d WHERE d.produ...",
+      "rewrite": null
+    },
+    {
+      "rule_id": "ST003",
+      "construct": "scalar_from_query",
+      "severity": "auto_with_note",
+      "line": 37,
+      "message": "Variable is loaded from a query. The notebook collects the value at this point; dbt inlines it as a scalar subquery, evaluated when the model runs.",
+      "snippet": "SELECT @avg_daily_units = ISNULL(SUM(d.quantity), 0) / 90.0 FROM dbo.dispenses AS d WHERE d.produ...",
+      "rewrite": null
+    },
+    {
+      "rule_id": "EX004",
+      "construct": "date_function",
+      "severity": "auto",
+      "line": 44,
+      "message": "Date functions map to Databricks equivalents (DATEADD, LAST_DAY, MAKE_DATE, ...).",
+      "snippet": "SELECT @on_hand = ISNULL(SUM(s.closing_qty), 0) FROM dbo.inventory_snapshots AS s WHERE s.product...",
+      "rewrite": null
+    },
+    {
+      "rule_id": "EX009",
+      "construct": "isnull",
+      "severity": "auto_with_note",
+      "line": 44,
+      "message": "ISNULL becomes COALESCE. ISNULL returns the type of its first argument (and can truncate the fallback value); COALESCE uses type precedence.",
+      "snippet": "SELECT @on_hand = ISNULL(SUM(s.closing_qty), 0) FROM dbo.inventory_snapshots AS s WHERE s.product...",
+      "rewrite": null
+    },
+    {
+      "rule_id": "ST003",
+      "construct": "scalar_from_query",
+      "severity": "auto_with_note",
+      "line": 44,
+      "message": "Variable is loaded from a query. The notebook collects the value at this point; dbt inlines it as a scalar subquery, evaluated when the model runs.",
+      "snippet": "SELECT @on_hand = ISNULL(SUM(s.closing_qty), 0) FROM dbo.inventory_snapshots AS s WHERE s.product...",
+      "rewrite": null
+    },
+    {
+      "rule_id": "CF008",
+      "construct": "if_branch",
+      "severity": "needs_review",
+      "line": 51,
+      "message": "Branch depends on table data (dbo.product_reorder_points) evaluated at run time. dbt models cannot branch on data; express it as a set-based condition or MERGE.",
+      "snippet": "IF EXISTS (SELECT 1 FROM dbo.product_reorder_points WHERE product_id = @product_id)",
+      "rewrite": null
+    },
+    {
+      "rule_id": "EX003",
+      "construct": "case_expression",
+      "severity": "auto",
+      "line": 52,
+      "message": "CASE and IIF translate directly (IIF becomes IF).",
+      "snippet": "UPDATE dbo.product_reorder_points SET avg_daily_units = @avg_daily_units, reorder_point = @reorde...",
+      "rewrite": null
+    },
+    {
+      "rule_id": "EX007",
+      "construct": "current_time",
+      "severity": "auto_with_note",
+      "line": 52,
+      "message": "Current time: SQL Server returns the server's local time; Databricks returns the session time zone (UTC unless configured).",
+      "snippet": "UPDATE dbo.product_reorder_points SET avg_daily_units = @avg_daily_units, reorder_point = @reorde...",
+      "rewrite": null
+    },
+    {
+      "rule_id": "EX015",
+      "construct": "bit_column",
+      "severity": "auto_with_note",
+      "line": 52,
+      "message": "BIT column compared with or assigned 0/1. On Databricks BIT is BOOLEAN and ANSI mode rejects BOOLEAN = INT; rewritten to TRUE/FALSE and CAST(... AS BOOLEAN).",
+      "snippet": "UPDATE dbo.product_reorder_points SET avg_daily_units = @avg_daily_units, reorder_point = @reorde...",
+      "rewrite": "bit_to_boolean"
+    },
+    {
+      "rule_id": "EX003",
+      "construct": "case_expression",
+      "severity": "auto",
+      "line": 60,
+      "message": "CASE and IIF translate directly (IIF becomes IF).",
+      "snippet": "INSERT INTO dbo.product_reorder_points (product_id, avg_daily_units, reorder_point, on_hand_qty, ...",
+      "rewrite": null
+    },
+    {
+      "rule_id": "EX007",
+      "construct": "current_time",
+      "severity": "auto_with_note",
+      "line": 60,
+      "message": "Current time: SQL Server returns the server's local time; Databricks returns the session time zone (UTC unless configured).",
+      "snippet": "INSERT INTO dbo.product_reorder_points (product_id, avg_daily_units, reorder_point, on_hand_qty, ...",
+      "rewrite": null
+    },
+    {
+      "rule_id": "EX015",
+      "construct": "bit_column",
+      "severity": "auto_with_note",
+      "line": 60,
+      "message": "BIT column compared with or assigned 0/1. On Databricks BIT is BOOLEAN and ANSI mode rejects BOOLEAN = INT; rewritten to TRUE/FALSE and CAST(... AS BOOLEAN).",
+      "snippet": "INSERT INTO dbo.product_reorder_points (product_id, avg_daily_units, reorder_point, on_hand_qty, ...",
+      "rewrite": "bit_to_boolean"
+    }
+  ],
+  "steps": [
+    {
+      "number": 1,
+      "kind": "manual",
+      "title": "manual block",
+      "line": 24,
+      "rewrites": [],
+      "reasons": [
+        "CF001: Cursor loops process one row at a time. Spark has no cursors; the loop body must be re-expressed as set-based logic (joins, window functions, aggregates).",
+        "open cursor has no automatic conversion",
+        "fetch cursor has no automatic conversion",
+        "CF002 (line 35): Procedural loop. Its termination and per-iteration state cannot be translated mechanically; rewrite set-based or as a driver loop in Python.",
+        "ST005 (line 35): @@FETCH_STATUS: Cursor loop state; it disappears once the cursor is rewritten set-based.",
+        "CF008 (line 51): Branch depends on table data (dbo.product_reorder_points) evaluated at run time. dbt models cannot branch on data; express it as a set-based condition or MERGE.",
+        "close cursor has no automatic conversion",
+        "deallocate cursor has no automatic conversion"
+      ],
+      "source_sql": "DECLARE product_cursor CURSOR LOCAL FAST_FORWARD FOR\n        SELECT\n            p.product_id,\n            p.lead_time_days,\n            CASE WHEN p.is_cold_chain = 1 THEN 10 ELSE 7 END\n        FROM dbo.products AS p\n        WHERE p.is_active = 1\nOPEN product_cursor\nFETCH NEXT FROM product_cursor INTO @product_id, @lead_time_days, @safety_days\nWHILE @@FETCH_STATUS = 0\n    BEGIN\n        SELECT @avg_daily_units = ISNULL(SUM(d.quantity), 0) / 90.0\n        FROM dbo.dispenses AS d\n        WHERE d.product_id = @product_id\n          AND d.status = 'DISPENSED'\n          AND d.dispense_date >  DATEADD(DAY, -90, @as_of_date)\n          AND d.dispense_date <= @as_of_date;\n\n        SELECT @on_hand = ISNULL(SUM(s.closing_qty), 0)\n        FROM dbo.inventory_snapshots AS s\n        WHERE s.product_id = @product_id\n          AND s.snapshot_month = EOMONTH(@as_of_date, -1);\n\n        SET @reorder_point = CEILING(@avg_daily_units * (@lead_time_days + @safety_days));\n\n        IF EXISTS (SELECT 1 FROM dbo.product_reorder_points WHERE product_id = @product_id)\n            UPDATE dbo.product_reorder_points\n            SET avg_daily_units = @avg_daily_units,\n                reorder_point   = @reorder_point,\n                on_hand_qty     = @on_hand,\n                needs_reorder   = CASE WHEN @on_hand <= @reorder_point THEN 1 ELSE 0 END,\n                calculated_at   = GETDATE()\n            WHERE product_id = @product_id;\n        ELSE\n            INSERT INTO dbo.product_reorder_points\n                (product_id, avg_daily_units, reorder_point, on_hand_qty, needs_reorder, calculated_at)\n            VALUES\n                (@product_id, @avg_daily_units, @reorder_point, @on_hand,\n                 CASE WHEN @on_hand <= @reorder_point THEN 1 ELSE 0 END, GETDATE());\n\n        FETCH NEXT FROM product_cursor INTO @product_id, @lead_time_days, @safety_days;\n    END\nCLOSE product_cursor\nDEALLOCATE product_cursor"
+    }
+  ],
+  "dropped": [
+    {
+      "line": 15,
+      "reason": "session option with no Databricks equivalent"
+    }
+  ],
+  "outputs": [
+    "dbt/macros/procedures/usp_recalc_reorder_points_cursor.sql",
+    "notebooks/usp_recalc_reorder_points_cursor.py"
+  ]
+}

@@ -1,0 +1,181 @@
+{
+  "procedure": "dbo.usp_rebuild_prescriber_rollup",
+  "name": "usp_rebuild_prescriber_rollup",
+  "source_file": "samples/tsql/09_usp_rebuild_prescriber_rollup.sql",
+  "parameters": [
+    {
+      "name": "@period_month",
+      "type": "DATE",
+      "default": null,
+      "output": false
+    }
+  ],
+  "verdict": "needs_review",
+  "conversion": "partial",
+  "counts": {
+    "auto": 9,
+    "auto_with_note": 2,
+    "needs_review": 1
+  },
+  "manual_steps": 2,
+  "ddl_loaded": true,
+  "rewrites_applied": [],
+  "findings": [
+    {
+      "rule_id": "ST004",
+      "construct": "parameters",
+      "severity": "auto",
+      "line": 10,
+      "message": "1 input parameter(s) become dbt vars and notebook widgets.",
+      "snippet": "@period_month",
+      "rewrite": null
+    },
+    {
+      "rule_id": "ST006",
+      "construct": "session_option",
+      "severity": "auto",
+      "line": 14,
+      "message": "SET NOCOUNT is a SQL Server session setting with no Databricks equivalent; dropped.",
+      "snippet": "SET NOCOUNT ON",
+      "rewrite": null
+    },
+    {
+      "rule_id": "EX004",
+      "construct": "date_function",
+      "severity": "auto",
+      "line": 16,
+      "message": "Date functions map to Databricks equivalents (DATEADD, LAST_DAY, MAKE_DATE, ...).",
+      "snippet": "DECLARE @period_start DATE = DATEADD(DAY, 1, EOMONTH(@period_month, -1))",
+      "rewrite": null
+    },
+    {
+      "rule_id": "EX004",
+      "construct": "date_function",
+      "severity": "auto",
+      "line": 17,
+      "message": "Date functions map to Databricks equivalents (DATEADD, LAST_DAY, MAKE_DATE, ...).",
+      "snippet": "DECLARE @period_end DATE = EOMONTH(@period_month)",
+      "rewrite": null
+    },
+    {
+      "rule_id": "ST001",
+      "construct": "temp_table",
+      "severity": "needs_review",
+      "line": 32,
+      "message": "#rollup is modified after it is populated (UPDATE/DELETE at line 48, 68, 73). Step-by-step mutation of intermediate state has to be re-expressed as a chain of CTEs/models, each deriving the next version of the data.",
+      "snippet": "INSERT INTO #rollup (prescriber_id, region_code, patient_count, dispense_count, total_days_supply...",
+      "rewrite": null
+    },
+    {
+      "rule_id": "DM002",
+      "construct": "update_with_join",
+      "severity": "auto_with_note",
+      "line": 48,
+      "message": "Delta UPDATE/DELETE has no FROM/JOIN clause; rewritten as MERGE INTO with the join as the source. If the join matches a target row more than once, SQL Server picks one silently but Delta MERGE fails.",
+      "snippet": "UPDATE r SET r.new_patient_count = n.new_patients FROM #rollup AS r INNER JOIN ( SELECT first_fil...",
+      "rewrite": "update_from_to_merge"
+    },
+    {
+      "rule_id": "EX002",
+      "construct": "window_function",
+      "severity": "auto",
+      "line": 48,
+      "message": "Window functions and frames translate directly.",
+      "snippet": "UPDATE r SET r.new_patient_count = n.new_patients FROM #rollup AS r INNER JOIN ( SELECT first_fil...",
+      "rewrite": null
+    },
+    {
+      "rule_id": "DM002",
+      "construct": "update_with_join",
+      "severity": "auto_with_note",
+      "line": 73,
+      "message": "Delta UPDATE/DELETE has no FROM/JOIN clause; rewritten as MERGE INTO with the join as the source. If the join matches a target row more than once, SQL Server picks one silently but Delta MERGE fails.",
+      "snippet": "WITH ranked AS ( SELECT prescriber_id, DENSE_RANK() OVER (PARTITION BY region_code ORDER BY total...",
+      "rewrite": "update_from_to_merge"
+    },
+    {
+      "rule_id": "EX001",
+      "construct": "cte",
+      "severity": "auto",
+      "line": 73,
+      "message": "CTEs are supported natively.",
+      "snippet": "WITH ranked AS ( SELECT prescriber_id, DENSE_RANK() OVER (PARTITION BY region_code ORDER BY total...",
+      "rewrite": null
+    },
+    {
+      "rule_id": "EX002",
+      "construct": "window_function",
+      "severity": "auto",
+      "line": 73,
+      "message": "Window functions and frames translate directly.",
+      "snippet": "WITH ranked AS ( SELECT prescriber_id, DENSE_RANK() OVER (PARTITION BY region_code ORDER BY total...",
+      "rewrite": null
+    },
+    {
+      "rule_id": "EX003",
+      "construct": "case_expression",
+      "severity": "auto",
+      "line": 73,
+      "message": "CASE and IIF translate directly (IIF becomes IF).",
+      "snippet": "WITH ranked AS ( SELECT prescriber_id, DENSE_RANK() OVER (PARTITION BY region_code ORDER BY total...",
+      "rewrite": null
+    },
+    {
+      "rule_id": "ST008",
+      "construct": "temp_cleanup",
+      "severity": "auto",
+      "line": 101,
+      "message": "Temp table cleanup has no equivalent (CTEs and views are scoped to the run); removed.",
+      "snippet": "DROP TABLE #rollup",
+      "rewrite": null
+    }
+  ],
+  "steps": [
+    {
+      "number": 1,
+      "kind": "manual",
+      "title": "manual block",
+      "line": 19,
+      "rewrites": [],
+      "reasons": [
+        "#rollup is modified across steps (see ST001/ST002)",
+        "ST001: #rollup is modified after it is populated (UPDATE/DELETE at line 48, 68, 73). Step-by-step mutation of intermediate state has to be re-expressed as a chain of CTEs/models, each deriving the next version of the data."
+      ],
+      "source_sql": "CREATE TABLE #rollup (\n        prescriber_id     INT           NOT NULL PRIMARY KEY,\n        region_code       VARCHAR(10)   NOT NULL,\n        patient_count     INT           NOT NULL,\n        dispense_count    INT           NOT NULL,\n        total_days_supply INT           NOT NULL,\n        total_paid        DECIMAL(14,2) NOT NULL,\n        new_patient_count INT           NULL,\n        rank_in_region    INT           NULL,\n        prescriber_tier   VARCHAR(10)   NULL\n    )\nINSERT INTO #rollup (prescriber_id, region_code, patient_count, dispense_count, total_days_supply, total_paid)\n    SELECT\n        pr.prescriber_id,\n        pr.region_code,\n        COUNT(DISTINCT d.patient_id),\n        COUNT(*),\n        SUM(d.days_supply),\n        SUM(d.paid_amount)\n    FROM dbo.dispenses AS d\n    INNER JOIN dbo.prescribers AS pr\n        ON pr.prescriber_id = d.prescriber_id\n    WHERE d.dispense_date BETWEEN @period_start AND @period_end\n      AND d.status = 'DISPENSED'\n    GROUP BY pr.prescriber_id, pr.region_code\nUPDATE r\n    SET r.new_patient_count = n.new_patients\n    FROM #rollup AS r\n    INNER JOIN (\n        SELECT first_fill.prescriber_id, COUNT(*) AS new_patients\n        FROM (\n            SELECT\n                d.patient_id,\n                d.prescriber_id,\n                d.dispense_date,\n                ROW_NUMBER() OVER (PARTITION BY d.patient_id ORDER BY d.dispense_date, d.dispense_id) AS rn\n            FROM dbo.dispenses AS d\n            WHERE d.status = 'DISPENSED'\n        ) AS first_fill\n        WHERE first_fill.rn = 1\n          AND first_fill.dispense_date BETWEEN @period_start AND @period_end\n        GROUP BY first_fill.prescriber_id\n    ) AS n\n        ON n.prescriber_id = r.prescriber_id\nUPDATE #rollup\n    SET new_patient_count = 0\n    WHERE new_patient_count IS NULL\nWITH ranked AS (\n        SELECT\n            prescriber_id,\n            DENSE_RANK() OVER (PARTITION BY region_code ORDER BY total_paid DESC) AS rnk\n        FROM #rollup\n    )\n    UPDATE r\n    SET r.rank_in_region  = k.rnk,\n        r.prescriber_tier = CASE WHEN k.rnk <= 5  THEN 'TOP'\n                                 WHEN k.rnk <= 20 THEN 'HIGH'\n                                 ELSE 'STANDARD' END\n    FROM #rollup AS r\n    INNER JOIN ranked AS k\n        ON k.prescriber_id = r.prescriber_id"
+    },
+    {
+      "number": 2,
+      "kind": "write",
+      "title": "delete dbo.prescriber_monthly_rollup",
+      "line": 89,
+      "rewrites": [],
+      "reasons": [],
+      "source_sql": null
+    },
+    {
+      "number": 3,
+      "kind": "manual",
+      "title": "insert statement",
+      "line": 92,
+      "rewrites": [],
+      "reasons": [
+        "#rollup is modified across steps (see ST001/ST002)"
+      ],
+      "source_sql": "INSERT INTO dbo.prescriber_monthly_rollup (\n        period_month, prescriber_id, region_code, patient_count, new_patient_count,\n        dispense_count, total_days_supply, total_paid, rank_in_region, prescriber_tier\n    )\n    SELECT\n        @period_end, prescriber_id, region_code, patient_count, new_patient_count,\n        dispense_count, total_days_supply, total_paid, rank_in_region, prescriber_tier\n    FROM #rollup"
+    }
+  ],
+  "dropped": [
+    {
+      "line": 14,
+      "reason": "session option with no Databricks equivalent"
+    },
+    {
+      "line": 101,
+      "reason": "temp table cleanup is not needed (CTEs/views are scoped to the run)"
+    }
+  ],
+  "outputs": [
+    "dbt/macros/procedures/usp_rebuild_prescriber_rollup.sql",
+    "notebooks/usp_rebuild_prescriber_rollup.py"
+  ]
+}

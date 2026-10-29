@@ -210,3 +210,34 @@ def check_dbt_project(spark, project) -> list[CheckResult]:
                     result.error = _first_line(exc)
                 results.append(result)
     return results
+
+
+def check_report_markdown(
+    results: list[CheckResult], dbt_results: list[CheckResult], spark_version: str
+) -> str:
+    """Markdown summary of a Spark check run."""
+
+    def count(rows, level=None, ok=None):
+        return sum((level is None or r.level == level) and (ok is None or r.ok == ok) for r in rows)
+
+    out = [
+        "# Spark check",
+        "",
+        f"Every generated statement checked against Apache Spark {spark_version} with empty tables "
+        "built from the DDL. Executed: the statement ran. Analyzed: a Delta-only statement "
+        "(MERGE/UPDATE/DELETE) was parsed by Spark and its expressions resolved. Skipped: a "
+        "manual step. This proves the SQL is valid and resolves; parity testing proves results.",
+        "",
+        f"- Notebook steps: {count(results, 'executed', True)} executed, "
+        f"{count(results, 'analyzed', True)} analyzed, {count(results, ok=False)} failed, "
+        f"{count(results, 'skipped')} skipped (manual)",
+        f"- dbt model builds: {count(dbt_results, ok=True)} passed, "
+        f"{count(dbt_results, ok=False)} failed",
+        "",
+        "| Procedure | Step | T-SQL line | Level | Result |",
+        "|---|---|---|---|---|",
+    ]
+    for r in [*results, *dbt_results]:
+        result = "ok" if r.ok else f"FAILED: {r.error}"
+        out.append(f"| {r.procedure} | {r.step} | {r.line} | {r.level} | {result} |")
+    return "\n".join(out) + "\n"

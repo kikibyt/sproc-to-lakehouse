@@ -1,0 +1,166 @@
+{
+  "procedure": "dbo.usp_shipment_sla_report",
+  "name": "usp_shipment_sla_report",
+  "source_file": "samples/tsql/07_usp_shipment_sla_report.sql",
+  "parameters": [
+    {
+      "name": "@week_start",
+      "type": "DATE",
+      "default": null,
+      "output": false
+    }
+  ],
+  "verdict": "auto_with_note",
+  "conversion": "full",
+  "counts": {
+    "auto": 7,
+    "auto_with_note": 5,
+    "needs_review": 0
+  },
+  "manual_steps": 0,
+  "ddl_loaded": true,
+  "rewrites_applied": [
+    "bit_to_boolean",
+    "iso_week_extract",
+    "transient_table_to_cte"
+  ],
+  "findings": [
+    {
+      "rule_id": "ST004",
+      "construct": "parameters",
+      "severity": "auto",
+      "line": 10,
+      "message": "1 input parameter(s) become dbt vars and notebook widgets.",
+      "snippet": "@week_start",
+      "rewrite": null
+    },
+    {
+      "rule_id": "ST006",
+      "construct": "session_option",
+      "severity": "auto",
+      "line": 14,
+      "message": "SET NOCOUNT is a SQL Server session setting with no Databricks equivalent; dropped.",
+      "snippet": "SET NOCOUNT ON",
+      "rewrite": null
+    },
+    {
+      "rule_id": "EX004",
+      "construct": "date_function",
+      "severity": "auto",
+      "line": 16,
+      "message": "Date functions map to Databricks equivalents (DATEADD, LAST_DAY, MAKE_DATE, ...).",
+      "snippet": "DECLARE @week_end DATE = DATEADD(DAY, 6, @week_start)",
+      "rewrite": null
+    },
+    {
+      "rule_id": "EX004",
+      "construct": "date_function",
+      "severity": "auto",
+      "line": 26,
+      "message": "Date functions map to Databricks equivalents (DATEADD, LAST_DAY, MAKE_DATE, ...).",
+      "snippet": "INSERT INTO @late (shipment_id, promised_delivery_date, delivered_date, days_late, requires_cold_...",
+      "rewrite": null
+    },
+    {
+      "rule_id": "EX005",
+      "construct": "datediff",
+      "severity": "auto_with_note",
+      "line": 26,
+      "message": "DATEDIFF(DAY): SQL Server counts unit boundaries crossed, Databricks counts whole units elapsed. Identical for DATE inputs in days; can differ by one for datetimes with a time part or for larger units.",
+      "snippet": "INSERT INTO @late (shipment_id, promised_delivery_date, delivered_date, days_late, requires_cold_...",
+      "rewrite": null
+    },
+    {
+      "rule_id": "EX009",
+      "construct": "isnull",
+      "severity": "auto_with_note",
+      "line": 26,
+      "message": "ISNULL becomes COALESCE. ISNULL returns the type of its first argument (and can truncate the fallback value); COALESCE uses type precedence.",
+      "snippet": "INSERT INTO @late (shipment_id, promised_delivery_date, delivered_date, days_late, requires_cold_...",
+      "rewrite": null
+    },
+    {
+      "rule_id": "ST002",
+      "construct": "table_variable",
+      "severity": "auto",
+      "line": 26,
+      "message": "@late is populated once and read once; it is inlined as a CTE.",
+      "snippet": "INSERT INTO @late (shipment_id, promised_delivery_date, delivered_date, days_late, requires_cold_...",
+      "rewrite": "transient_table_to_cte"
+    },
+    {
+      "rule_id": "DM007",
+      "construct": "result_set",
+      "severity": "auto_with_note",
+      "line": 38,
+      "message": "Returns a result set to the caller; becomes a model/view (dbt) or a displayed DataFrame (notebook). Consumers must read it from there.",
+      "snippet": "SELECT DATEPART(ISO_WEEK, @week_start) AS iso_week, st.region_code, s.ship_method, COUNT(*) AS sh...",
+      "rewrite": null
+    },
+    {
+      "rule_id": "EX003",
+      "construct": "case_expression",
+      "severity": "auto",
+      "line": 38,
+      "message": "CASE and IIF translate directly (IIF becomes IF).",
+      "snippet": "SELECT DATEPART(ISO_WEEK, @week_start) AS iso_week, st.region_code, s.ship_method, COUNT(*) AS sh...",
+      "rewrite": null
+    },
+    {
+      "rule_id": "EX004",
+      "construct": "date_function",
+      "severity": "auto",
+      "line": 38,
+      "message": "Date functions map to Databricks equivalents (DATEADD, LAST_DAY, MAKE_DATE, ...).",
+      "snippet": "SELECT DATEPART(ISO_WEEK, @week_start) AS iso_week, st.region_code, s.ship_method, COUNT(*) AS sh...",
+      "rewrite": null
+    },
+    {
+      "rule_id": "EX006",
+      "construct": "datepart_week",
+      "severity": "auto_with_note",
+      "line": 38,
+      "message": "DATEPART(ISO_WEEK): sqlglot emits EXTRACT(WEEKISO ...), which is not a Databricks field; rewritten to EXTRACT(WEEK ...), which is ISO 8601.",
+      "snippet": "SELECT DATEPART(ISO_WEEK, @week_start) AS iso_week, st.region_code, s.ship_method, COUNT(*) AS sh...",
+      "rewrite": "iso_week_extract"
+    },
+    {
+      "rule_id": "EX015",
+      "construct": "bit_column",
+      "severity": "auto_with_note",
+      "line": 38,
+      "message": "BIT column compared with or assigned 0/1. On Databricks BIT is BOOLEAN and ANSI mode rejects BOOLEAN = INT; rewritten to TRUE/FALSE and CAST(... AS BOOLEAN).",
+      "snippet": "SELECT DATEPART(ISO_WEEK, @week_start) AS iso_week, st.region_code, s.ship_method, COUNT(*) AS sh...",
+      "rewrite": "bit_to_boolean"
+    }
+  ],
+  "steps": [
+    {
+      "number": 1,
+      "kind": "result",
+      "title": "result set",
+      "line": 38,
+      "rewrites": [
+        "bit_to_boolean",
+        "iso_week_extract",
+        "transient_table_to_cte"
+      ],
+      "reasons": [],
+      "source_sql": null
+    }
+  ],
+  "dropped": [
+    {
+      "line": 14,
+      "reason": "session option with no Databricks equivalent"
+    },
+    {
+      "line": 18,
+      "reason": "@late is defined by its query instead"
+    }
+  ],
+  "outputs": [
+    "dbt/models/usp_shipment_sla_report/shipment_sla_report.sql",
+    "notebooks/usp_shipment_sla_report.py"
+  ]
+}

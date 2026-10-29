@@ -1,0 +1,47 @@
+version: 2
+models:
+- name: daily_dispense_summary
+  description: Converted from dbo.usp_load_daily_dispense_summary (T-SQL line 22).
+  columns:
+  - name: summary_date
+    data_type: date
+    data_tests:
+    - not_null
+  - name: summary_date_key
+    data_type: char(8)
+    data_tests:
+    - not_null
+  - name: therapy_area
+    data_type: varchar(30)
+    data_tests:
+    - not_null
+  - name: dispense_count
+    data_type: int
+    data_tests:
+    - not_null
+  - name: patient_count
+    data_type: int
+    data_tests:
+    - not_null
+  - name: total_quantity
+    data_type: decimal(14, 2)
+    data_tests:
+    - not_null
+  - name: total_days_supply
+    data_type: int
+    data_tests:
+    - not_null
+  - name: total_billed
+    data_type: decimal(14, 2)
+    data_tests:
+    - not_null
+  - name: total_paid
+    data_type: decimal(14, 2)
+    data_tests:
+    - not_null
+  - name: paid_to_billed_pct
+    data_type: decimal(7, 2)
+  - name: loaded_at
+    data_type: timestamp
+    data_tests:
+    - not_null

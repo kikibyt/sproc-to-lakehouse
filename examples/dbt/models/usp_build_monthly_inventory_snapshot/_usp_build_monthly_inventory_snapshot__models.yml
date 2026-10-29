@@ -1,0 +1,43 @@
+version: 2
+models:
+- name: inventory_snapshots
+  description: Converted from dbo.usp_build_monthly_inventory_snapshot (T-SQL line 40).
+  columns:
+  - name: snapshot_month
+    data_type: date
+    data_tests:
+    - not_null
+  - name: site_id
+    data_type: int
+    data_tests:
+    - not_null
+  - name: product_id
+    data_type: int
+    data_tests:
+    - not_null
+  - name: opening_qty
+    data_type: decimal(14, 2)
+    data_tests:
+    - not_null
+  - name: received_qty
+    data_type: decimal(14, 2)
+    data_tests:
+    - not_null
+  - name: dispensed_qty
+    data_type: decimal(14, 2)
+    data_tests:
+    - not_null
+  - name: adjusted_qty
+    data_type: decimal(14, 2)
+    data_tests:
+    - not_null
+  - name: closing_qty
+    data_type: decimal(14, 2)
+    data_tests:
+    - not_null
+  - name: avg_dispensed_3m
+    data_type: decimal(14, 2)
+  - name: loaded_at
+    data_type: timestamp
+    data_tests:
+    - not_null

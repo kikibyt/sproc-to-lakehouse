@@ -1,0 +1,142 @@
+{
+  "procedure": "dbo.usp_export_dispenses_by_region_dynamic",
+  "name": "usp_export_dispenses_by_region_dynamic",
+  "source_file": "samples/tsql/11_usp_export_dispenses_by_region_dynamic.sql",
+  "parameters": [
+    {
+      "name": "@from_date",
+      "type": "DATE",
+      "default": null,
+      "output": false
+    },
+    {
+      "name": "@to_date",
+      "type": "DATE",
+      "default": null,
+      "output": false
+    },
+    {
+      "name": "@therapy_area",
+      "type": "VARCHAR(30)",
+      "default": "NULL",
+      "output": false
+    }
+  ],
+  "verdict": "needs_review",
+  "conversion": "partial",
+  "counts": {
+    "auto": 3,
+    "auto_with_note": 4,
+    "needs_review": 2
+  },
+  "manual_steps": 1,
+  "ddl_loaded": true,
+  "rewrites_applied": [],
+  "findings": [
+    {
+      "rule_id": "ST004",
+      "construct": "parameters",
+      "severity": "auto",
+      "line": 9,
+      "message": "3 input parameter(s) become dbt vars and notebook widgets.",
+      "snippet": "@from_date, @to_date, @therapy_area",
+      "rewrite": null
+    },
+    {
+      "rule_id": "ST006",
+      "construct": "session_option",
+      "severity": "auto",
+      "line": 15,
+      "message": "SET NOCOUNT is a SQL Server session setting with no Databricks equivalent; dropped.",
+      "snippet": "SET NOCOUNT ON",
+      "rewrite": null
+    },
+    {
+      "rule_id": "EX013",
+      "construct": "unsupported_function",
+      "severity": "needs_review",
+      "line": 20,
+      "message": "QUOTENAME(): no Databricks equivalent; sqlglot passes the call through unchanged, so the generated SQL would fail. Needs a manual rewrite.",
+      "snippet": "SELECT @cols = STRING_AGG(QUOTENAME(region_code), N', ') WITHIN GROUP (ORDER BY region_code) FROM...",
+      "rewrite": null
+    },
+    {
+      "rule_id": "EX014",
+      "construct": "string_agg",
+      "severity": "auto_with_note",
+      "line": 20,
+      "message": "STRING_AGG becomes LISTAGG, which requires a recent Databricks Runtime; on older runtimes use array_join(collect_list(...)). Check your runtime version.",
+      "snippet": "SELECT @cols = STRING_AGG(QUOTENAME(region_code), N', ') WITHIN GROUP (ORDER BY region_code) FROM...",
+      "rewrite": null
+    },
+    {
+      "rule_id": "EX015",
+      "construct": "bit_column",
+      "severity": "auto_with_note",
+      "line": 20,
+      "message": "BIT column compared with or assigned 0/1. On Databricks BIT is BOOLEAN and ANSI mode rejects BOOLEAN = INT; rewritten to TRUE/FALSE and CAST(... AS BOOLEAN).",
+      "snippet": "SELECT @cols = STRING_AGG(QUOTENAME(region_code), N', ') WITHIN GROUP (ORDER BY region_code) FROM...",
+      "rewrite": "bit_to_boolean"
+    },
+    {
+      "rule_id": "ST003",
+      "construct": "scalar_from_query",
+      "severity": "auto_with_note",
+      "line": 20,
+      "message": "Variable is loaded from a query. The notebook collects the value at this point; dbt inlines it as a scalar subquery, evaluated when the model runs.",
+      "snippet": "SELECT @cols = STRING_AGG(QUOTENAME(region_code), N', ') WITHIN GROUP (ORDER BY region_code) FROM...",
+      "rewrite": null
+    },
+    {
+      "rule_id": "EX003",
+      "construct": "case_expression",
+      "severity": "auto",
+      "line": 23,
+      "message": "CASE and IIF translate directly (IIF becomes IF).",
+      "snippet": "SET @sql = N' SELECT product_code, ' + @cols + N' FROM ( SELECT p.product_code, st.region_code, d...",
+      "rewrite": null
+    },
+    {
+      "rule_id": "EX010",
+      "construct": "string_concat_plus",
+      "severity": "auto_with_note",
+      "line": 23,
+      "message": "'+' concatenates strings in SQL Server but is numeric addition in Databricks (sqlglot leaves it unchanged, which yields NULL or an error); rewritten to CONCAT. NULL handling is the same: any NULL gives NULL.",
+      "snippet": "SET @sql = N' SELECT product_code, ' + @cols + N' FROM ( SELECT p.product_code, st.region_code, d...",
+      "rewrite": "plus_to_concat"
+    },
+    {
+      "rule_id": "CF005",
+      "construct": "dynamic_sql",
+      "severity": "needs_review",
+      "line": 41,
+      "message": "SQL text is assembled at run time, so it cannot be analysed or converted statically. Rewrite with the shape known in advance (e.g. PySpark pivot() or a dbt macro that builds the column list).",
+      "snippet": "EXEC sys.sp_executesql @sql, N'@from_date DATE, @to_date DATE, @therapy_area VARCHAR(30)', @from_...",
+      "rewrite": null
+    }
+  ],
+  "steps": [
+    {
+      "number": 1,
+      "kind": "manual",
+      "title": "manual block",
+      "line": 20,
+      "rewrites": [],
+      "reasons": [
+        "EX013: QUOTENAME(): no Databricks equivalent; sqlglot passes the call through unchanged, so the generated SQL would fail. Needs a manual rewrite.",
+        "CF005: SQL text is assembled at run time, so it cannot be analysed or converted statically. Rewrite with the shape known in advance (e.g. PySpark pivot() or a dbt macro that builds the column list)."
+      ],
+      "source_sql": "SELECT @cols = STRING_AGG(QUOTENAME(region_code), N', ') WITHIN GROUP (ORDER BY region_code)\n    FROM (SELECT DISTINCT region_code FROM dbo.sites WHERE is_active = 1) AS r\nEXEC sys.sp_executesql\n        @sql,\n        N'@from_date DATE, @to_date DATE, @therapy_area VARCHAR(30)',\n        @from_date    = @from_date,\n        @to_date      = @to_date,\n        @therapy_area = @therapy_area"
+    }
+  ],
+  "dropped": [
+    {
+      "line": 15,
+      "reason": "session option with no Databricks equivalent"
+    }
+  ],
+  "outputs": [
+    "dbt/macros/procedures/usp_export_dispenses_by_region_dynamic.sql",
+    "notebooks/usp_export_dispenses_by_region_dynamic.py"
+  ]
+}

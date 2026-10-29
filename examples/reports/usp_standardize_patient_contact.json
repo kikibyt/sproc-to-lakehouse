@@ -1,0 +1,131 @@
+{
+  "procedure": "dbo.usp_standardize_patient_contact",
+  "name": "usp_standardize_patient_contact",
+  "source_file": "samples/tsql/06_usp_standardize_patient_contact.sql",
+  "parameters": [],
+  "verdict": "needs_review",
+  "conversion": "partial",
+  "counts": {
+    "auto": 5,
+    "auto_with_note": 3,
+    "needs_review": 1
+  },
+  "manual_steps": 1,
+  "ddl_loaded": true,
+  "rewrites_applied": [],
+  "findings": [
+    {
+      "rule_id": "ST006",
+      "construct": "session_option",
+      "severity": "auto",
+      "line": 13,
+      "message": "SET NOCOUNT is a SQL Server session setting with no Databricks equivalent; dropped.",
+      "snippet": "SET NOCOUNT ON",
+      "rewrite": null
+    },
+    {
+      "rule_id": "DM006",
+      "construct": "truncate",
+      "severity": "auto",
+      "line": 15,
+      "message": "Full reload: becomes a table materialization (dbt) and DELETE FROM before the INSERT (notebook; open-source Delta has no TRUNCATE).",
+      "snippet": "TRUNCATE TABLE dbo.patient_contact_clean",
+      "rewrite": null
+    },
+    {
+      "rule_id": "EX001",
+      "construct": "cte",
+      "severity": "auto",
+      "line": 17,
+      "message": "CTEs are supported natively.",
+      "snippet": "WITH cleaned AS ( SELECT patient_id, LTRIM(RTRIM(first_name)) AS first_name, LTRIM(RTRIM(last_nam...",
+      "rewrite": null
+    },
+    {
+      "rule_id": "EX003",
+      "construct": "case_expression",
+      "severity": "auto",
+      "line": 17,
+      "message": "CASE and IIF translate directly (IIF becomes IF).",
+      "snippet": "WITH cleaned AS ( SELECT patient_id, LTRIM(RTRIM(first_name)) AS first_name, LTRIM(RTRIM(last_nam...",
+      "rewrite": null
+    },
+    {
+      "rule_id": "EX009",
+      "construct": "isnull",
+      "severity": "auto_with_note",
+      "line": 17,
+      "message": "ISNULL becomes COALESCE. ISNULL returns the type of its first argument (and can truncate the fallback value); COALESCE uses type precedence.",
+      "snippet": "WITH cleaned AS ( SELECT patient_id, LTRIM(RTRIM(first_name)) AS first_name, LTRIM(RTRIM(last_nam...",
+      "rewrite": null
+    },
+    {
+      "rule_id": "EX010",
+      "construct": "string_concat_plus",
+      "severity": "auto_with_note",
+      "line": 17,
+      "message": "'+' concatenates strings in SQL Server but is numeric addition in Databricks (sqlglot leaves it unchanged, which yields NULL or an error); rewritten to CONCAT. NULL handling is the same: any NULL gives NULL.",
+      "snippet": "WITH cleaned AS ( SELECT patient_id, LTRIM(RTRIM(first_name)) AS first_name, LTRIM(RTRIM(last_nam...",
+      "rewrite": "plus_to_concat"
+    },
+    {
+      "rule_id": "EX011",
+      "construct": "string_function",
+      "severity": "auto",
+      "line": 17,
+      "message": "String functions map directly (CHARINDEX becomes LOCATE, LTRIM/RTRIM stay).",
+      "snippet": "WITH cleaned AS ( SELECT patient_id, LTRIM(RTRIM(first_name)) AS first_name, LTRIM(RTRIM(last_nam...",
+      "rewrite": null
+    },
+    {
+      "rule_id": "EX012",
+      "construct": "len_trailing_spaces",
+      "severity": "auto_with_note",
+      "line": 17,
+      "message": "LEN ignores trailing spaces; Databricks LENGTH counts them. Equal only when values are already right-trimmed.",
+      "snippet": "WITH cleaned AS ( SELECT patient_id, LTRIM(RTRIM(first_name)) AS first_name, LTRIM(RTRIM(last_nam...",
+      "rewrite": null
+    },
+    {
+      "rule_id": "EX013",
+      "construct": "unsupported_function",
+      "severity": "needs_review",
+      "line": 17,
+      "message": "STUFF(): no Databricks equivalent; sqlglot passes the call through unchanged, so the generated SQL would fail. Needs a manual rewrite.",
+      "snippet": "WITH cleaned AS ( SELECT patient_id, LTRIM(RTRIM(first_name)) AS first_name, LTRIM(RTRIM(last_nam...",
+      "rewrite": null
+    }
+  ],
+  "steps": [
+    {
+      "number": 1,
+      "kind": "write",
+      "title": "truncate dbo.patient_contact_clean",
+      "line": 15,
+      "rewrites": [],
+      "reasons": [],
+      "source_sql": null
+    },
+    {
+      "number": 2,
+      "kind": "manual",
+      "title": "insert statement",
+      "line": 17,
+      "rewrites": [],
+      "reasons": [
+        "EX013: STUFF(): no Databricks equivalent; sqlglot passes the call through unchanged, so the generated SQL would fail. Needs a manual rewrite."
+      ],
+      "source_sql": "WITH cleaned AS (\n        SELECT\n            patient_id,\n            LTRIM(RTRIM(first_name)) AS first_name,\n            LTRIM(RTRIM(last_name))  AS last_name,\n            REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(\n                ISNULL(phone_raw, ''), '(', ''), ')', ''), '-', ''), ' ', ''), '.', '') AS phone_digits,\n            LOWER(LTRIM(RTRIM(email_raw)))  AS email_normalized,\n            LEFT(LTRIM(RTRIM(postal_code)), 5) AS postal_code5,\n            UPPER(state_code) AS state_code\n        FROM dbo.patients\n    )\n    INSERT INTO dbo.patient_contact_clean (\n        patient_id, full_name, phone_digits, phone_formatted, phone_masked,\n        email_normalized, email_domain, postal_code5, state_code, contact_quality\n    )\n    SELECT\n        patient_id,\n        UPPER(LEFT(first_name, 1)) + LOWER(SUBSTRING(first_name, 2, LEN(first_name)))\n            + ' ' + UPPER(last_name),\n        phone_digits,\n        CASE WHEN LEN(phone_digits) = 10\n             THEN '(' + LEFT(phone_digits, 3) + ') ' + SUBSTRING(phone_digits, 4, 3)\n                  + '-' + RIGHT(phone_digits, 4)\n        END,\n        CASE WHEN LEN(phone_digits) = 10 THEN STUFF(phone_digits, 4, 3, '***') END,\n        email_normalized,\n        CASE WHEN CHARINDEX('@', email_normalized) > 1\n             THEN SUBSTRING(email_normalized, CHARINDEX('@', email_normalized) + 1, LEN(email_normalized))\n        END,\n        RIGHT('00000' + postal_code5, 5),\n        state_code,\n        CASE\n            WHEN LEN(phone_digits) = 10 AND CHARINDEX('@', email_normalized) > 1 THEN 'COMPLETE'\n            WHEN LEN(phone_digits) = 10 OR CHARINDEX('@', email_normalized) > 1  THEN 'PARTIAL'\n            ELSE 'MISSING'\n        END\n    FROM cleaned"
+    }
+  ],
+  "dropped": [
+    {
+      "line": 13,
+      "reason": "session option with no Databricks equivalent"
+    }
+  ],
+  "outputs": [
+    "dbt/macros/procedures/usp_standardize_patient_contact.sql",
+    "notebooks/usp_standardize_patient_contact.py"
+  ]
+}

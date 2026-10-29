@@ -1,0 +1,48 @@
+version: 2
+models:
+- name: claim_classification
+  description: Converted from dbo.usp_classify_payer_claims (T-SQL line 20).
+  columns:
+  - name: claim_id
+    data_type: bigint
+    data_tests:
+    - not_null
+    - unique
+  - name: dispense_id
+    data_type: bigint
+    data_tests:
+    - not_null
+  - name: submitted_date
+    data_type: date
+    data_tests:
+    - not_null
+  - name: payer_type
+    data_type: varchar(30)
+    data_tests:
+    - not_null
+  - name: coverage_segment
+    data_type: varchar(30)
+    data_tests:
+    - not_null
+  - name: claim_outcome
+    data_type: varchar(30)
+    data_tests:
+    - not_null
+  - name: copay_tier
+    data_type: varchar(10)
+    data_tests:
+    - not_null
+  - name: paid_ratio
+    data_type: decimal(9, 4)
+  - name: follow_up_priority
+    data_type: varchar(10)
+    data_tests:
+    - not_null
+  - name: high_oop_flag
+    data_type: boolean
+    data_tests:
+    - not_null
+  - name: classified_at
+    data_type: timestamp
+    data_tests:
+    - not_null

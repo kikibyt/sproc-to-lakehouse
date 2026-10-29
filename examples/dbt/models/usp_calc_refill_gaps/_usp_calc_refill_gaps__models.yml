@@ -1,0 +1,43 @@
+version: 2
+models:
+- name: refill_gap_events
+  description: Converted from dbo.usp_calc_refill_gaps (T-SQL line 18).
+  columns:
+  - name: patient_id
+    data_type: varchar(10)
+    data_tests:
+    - not_null
+  - name: product_id
+    data_type: int
+    data_tests:
+    - not_null
+  - name: fill_seq
+    data_type: int
+    data_tests:
+    - not_null
+  - name: dispense_date
+    data_type: date
+    data_tests:
+    - not_null
+  - name: supply_end_date
+    data_type: date
+    data_tests:
+    - not_null
+  - name: next_dispense_date
+    data_type: date
+  - name: gap_days
+    data_type: int
+    data_tests:
+    - not_null
+  - name: gap_category
+    data_type: varchar(20)
+    data_tests:
+    - not_null
+  - name: is_open_gap
+    data_type: boolean
+    data_tests:
+    - not_null
+  - name: calculated_at
+    data_type: timestamp
+    data_tests:
+    - not_null

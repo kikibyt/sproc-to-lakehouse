@@ -1,0 +1,221 @@
+{
+  "procedure": "dbo.usp_update_shipment_status",
+  "name": "usp_update_shipment_status",
+  "source_file": "samples/tsql/08_usp_update_shipment_status.sql",
+  "parameters": [
+    {
+      "name": "@as_of",
+      "type": "DATETIME2(0)",
+      "default": "NULL",
+      "output": false
+    }
+  ],
+  "verdict": "needs_review",
+  "conversion": "partial",
+  "counts": {
+    "auto": 4,
+    "auto_with_note": 5,
+    "needs_review": 3
+  },
+  "manual_steps": 3,
+  "ddl_loaded": true,
+  "rewrites_applied": [
+    "update_from_to_merge"
+  ],
+  "findings": [
+    {
+      "rule_id": "ST004",
+      "construct": "parameters",
+      "severity": "auto",
+      "line": 10,
+      "message": "1 input parameter(s) become dbt vars and notebook widgets.",
+      "snippet": "@as_of",
+      "rewrite": null
+    },
+    {
+      "rule_id": "ST006",
+      "construct": "session_option",
+      "severity": "auto",
+      "line": 14,
+      "message": "SET NOCOUNT is a SQL Server session setting with no Databricks equivalent; dropped.",
+      "snippet": "SET NOCOUNT ON",
+      "rewrite": null
+    },
+    {
+      "rule_id": "EX007",
+      "construct": "current_time",
+      "severity": "auto_with_note",
+      "line": 20,
+      "message": "Current time: SQL Server returns the server's local time; Databricks returns the session time zone (UTC unless configured).",
+      "snippet": "SET @as_of = ISNULL(@as_of, SYSDATETIME())",
+      "rewrite": null
+    },
+    {
+      "rule_id": "EX009",
+      "construct": "isnull",
+      "severity": "auto_with_note",
+      "line": 20,
+      "message": "ISNULL becomes COALESCE. ISNULL returns the type of its first argument (and can truncate the fallback value); COALESCE uses type precedence.",
+      "snippet": "SET @as_of = ISNULL(@as_of, SYSDATETIME())",
+      "rewrite": null
+    },
+    {
+      "rule_id": "DM002",
+      "construct": "update_with_join",
+      "severity": "auto_with_note",
+      "line": 23,
+      "message": "Delta UPDATE/DELETE has no FROM/JOIN clause; rewritten as MERGE INTO with the join as the source. If the join matches a target row more than once, SQL Server picks one silently but Delta MERGE fails.",
+      "snippet": "WITH latest AS ( SELECT e.shipment_id, e.event_code, e.event_ts, ROW_NUMBER() OVER (PARTITION BY ...",
+      "rewrite": "update_from_to_merge"
+    },
+    {
+      "rule_id": "EX001",
+      "construct": "cte",
+      "severity": "auto",
+      "line": 23,
+      "message": "CTEs are supported natively.",
+      "snippet": "WITH latest AS ( SELECT e.shipment_id, e.event_code, e.event_ts, ROW_NUMBER() OVER (PARTITION BY ...",
+      "rewrite": null
+    },
+    {
+      "rule_id": "EX002",
+      "construct": "window_function",
+      "severity": "auto",
+      "line": 23,
+      "message": "Window functions and frames translate directly.",
+      "snippet": "WITH latest AS ( SELECT e.shipment_id, e.event_code, e.event_ts, ROW_NUMBER() OVER (PARTITION BY ...",
+      "rewrite": null
+    },
+    {
+      "rule_id": "ST005",
+      "construct": "system_variable",
+      "severity": "needs_review",
+      "line": 43,
+      "message": "@@ROWCOUNT: Rows affected by the previous statement. On Delta this comes from the operation metrics (DataFrame counts or DESCRIBE HISTORY), not a session variable.",
+      "snippet": "SET @rows_delivered = @@ROWCOUNT",
+      "rewrite": null
+    },
+    {
+      "rule_id": "DM002",
+      "construct": "update_with_join",
+      "severity": "auto_with_note",
+      "line": 46,
+      "message": "Delta UPDATE/DELETE has no FROM/JOIN clause; rewritten as MERGE INTO with the join as the source. If the join matches a target row more than once, SQL Server picks one silently but Delta MERGE fails.",
+      "snippet": "UPDATE s SET s.status = 'EXCEPTION', s.last_status_update = @as_of FROM dbo.shipments AS s INNER ...",
+      "rewrite": "update_from_to_merge"
+    },
+    {
+      "rule_id": "ST005",
+      "construct": "system_variable",
+      "severity": "needs_review",
+      "line": 56,
+      "message": "@@ROWCOUNT: Rows affected by the previous statement. On Delta this comes from the operation metrics (DataFrame counts or DESCRIBE HISTORY), not a session variable.",
+      "snippet": "SET @rows_exception = @@ROWCOUNT",
+      "rewrite": null
+    },
+    {
+      "rule_id": "ST005",
+      "construct": "system_variable",
+      "severity": "needs_review",
+      "line": 65,
+      "message": "@@ROWCOUNT: Rows affected by the previous statement. On Delta this comes from the operation metrics (DataFrame counts or DESCRIBE HISTORY), not a session variable.",
+      "snippet": "SET @rows_delayed = @@ROWCOUNT",
+      "rewrite": null
+    },
+    {
+      "rule_id": "EX007",
+      "construct": "current_time",
+      "severity": "auto_with_note",
+      "line": 67,
+      "message": "Current time: SQL Server returns the server's local time; Databricks returns the session time zone (UTC unless configured).",
+      "snippet": "INSERT INTO dbo.etl_run_log (proc_name, step_name, status, rows_affected, started_at, finished_at...",
+      "rewrite": null
+    }
+  ],
+  "steps": [
+    {
+      "number": 1,
+      "kind": "scalar",
+      "title": "load @as_of",
+      "line": 20,
+      "rewrites": [],
+      "reasons": [],
+      "source_sql": null
+    },
+    {
+      "number": 2,
+      "kind": "write",
+      "title": "update dbo.shipments",
+      "line": 23,
+      "rewrites": [
+        "update_from_to_merge"
+      ],
+      "reasons": [],
+      "source_sql": null
+    },
+    {
+      "number": 3,
+      "kind": "manual",
+      "title": "set_variable statement",
+      "line": 43,
+      "rewrites": [],
+      "reasons": [
+        "ST005: @@ROWCOUNT: Rows affected by the previous statement. On Delta this comes from the operation metrics (DataFrame counts or DESCRIBE HISTORY), not a session variable."
+      ],
+      "source_sql": "SET @rows_delivered = @@ROWCOUNT"
+    },
+    {
+      "number": 4,
+      "kind": "write",
+      "title": "update dbo.shipments",
+      "line": 46,
+      "rewrites": [
+        "update_from_to_merge"
+      ],
+      "reasons": [],
+      "source_sql": null
+    },
+    {
+      "number": 5,
+      "kind": "manual",
+      "title": "set_variable statement",
+      "line": 56,
+      "rewrites": [],
+      "reasons": [
+        "ST005: @@ROWCOUNT: Rows affected by the previous statement. On Delta this comes from the operation metrics (DataFrame counts or DESCRIBE HISTORY), not a session variable."
+      ],
+      "source_sql": "SET @rows_exception = @@ROWCOUNT"
+    },
+    {
+      "number": 6,
+      "kind": "write",
+      "title": "update dbo.shipments",
+      "line": 59,
+      "rewrites": [],
+      "reasons": [],
+      "source_sql": null
+    },
+    {
+      "number": 7,
+      "kind": "manual",
+      "title": "manual block",
+      "line": 65,
+      "rewrites": [],
+      "reasons": [
+        "ST005: @@ROWCOUNT: Rows affected by the previous statement. On Delta this comes from the operation metrics (DataFrame counts or DESCRIBE HISTORY), not a session variable.",
+        "uses a variable that cannot be resolved: assigned by a manual step (line 43)"
+      ],
+      "source_sql": "SET @rows_delayed = @@ROWCOUNT\nINSERT INTO dbo.etl_run_log (proc_name, step_name, status, rows_affected, started_at, finished_at)\n    VALUES\n        ('usp_update_shipment_status', 'mark_delivered', 'SUCCEEDED', @rows_delivered, @as_of, SYSDATETIME()),\n        ('usp_update_shipment_status', 'mark_exception', 'SUCCEEDED', @rows_exception, @as_of, SYSDATETIME()),\n        ('usp_update_shipment_status', 'mark_delayed',   'SUCCEEDED', @rows_delayed,   @as_of, SYSDATETIME())"
+    }
+  ],
+  "dropped": [
+    {
+      "line": 14,
+      "reason": "session option with no Databricks equivalent"
+    }
+  ],
+  "outputs": [
+    "dbt/macros/procedures/usp_update_shipment_status.sql",
+    "notebooks/usp_update_shipment_status.py"
+  ]
+}

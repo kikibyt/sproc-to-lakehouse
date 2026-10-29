@@ -1,0 +1,201 @@
+{
+  "procedure": "dbo.usp_build_monthly_inventory_snapshot",
+  "name": "usp_build_monthly_inventory_snapshot",
+  "source_file": "samples/tsql/02_usp_build_monthly_inventory_snapshot.sql",
+  "parameters": [
+    {
+      "name": "@snapshot_month",
+      "type": "DATE",
+      "default": null,
+      "output": false
+    }
+  ],
+  "verdict": "auto_with_note",
+  "conversion": "full",
+  "counts": {
+    "auto": 11,
+    "auto_with_note": 3,
+    "needs_review": 0
+  },
+  "manual_steps": 0,
+  "ddl_loaded": true,
+  "rewrites_applied": [
+    "transient_table_to_cte",
+    "update_from_to_merge"
+  ],
+  "findings": [
+    {
+      "rule_id": "ST004",
+      "construct": "parameters",
+      "severity": "auto",
+      "line": 11,
+      "message": "1 input parameter(s) become dbt vars and notebook widgets.",
+      "snippet": "@snapshot_month",
+      "rewrite": null
+    },
+    {
+      "rule_id": "ST006",
+      "construct": "session_option",
+      "severity": "auto",
+      "line": 15,
+      "message": "SET NOCOUNT is a SQL Server session setting with no Databricks equivalent; dropped.",
+      "snippet": "SET NOCOUNT ON",
+      "rewrite": null
+    },
+    {
+      "rule_id": "EX004",
+      "construct": "date_function",
+      "severity": "auto",
+      "line": 17,
+      "message": "Date functions map to Databricks equivalents (DATEADD, LAST_DAY, MAKE_DATE, ...).",
+      "snippet": "DECLARE @month_start DATE = DATEFROMPARTS(YEAR(@snapshot_month), MONTH(@snapshot_month), 1)",
+      "rewrite": null
+    },
+    {
+      "rule_id": "EX004",
+      "construct": "date_function",
+      "severity": "auto",
+      "line": 18,
+      "message": "Date functions map to Databricks equivalents (DATEADD, LAST_DAY, MAKE_DATE, ...).",
+      "snippet": "DECLARE @month_end DATE = EOMONTH(@snapshot_month)",
+      "rewrite": null
+    },
+    {
+      "rule_id": "EX004",
+      "construct": "date_function",
+      "severity": "auto",
+      "line": 19,
+      "message": "Date functions map to Databricks equivalents (DATEADD, LAST_DAY, MAKE_DATE, ...).",
+      "snippet": "DECLARE @prev_month_end DATE = EOMONTH(@snapshot_month, -1)",
+      "rewrite": null
+    },
+    {
+      "rule_id": "ST008",
+      "construct": "temp_cleanup",
+      "severity": "auto",
+      "line": 21,
+      "message": "Temp table cleanup has no equivalent (CTEs and views are scoped to the run); removed.",
+      "snippet": "IF OBJECT_ID('tempdb..#movements') IS NOT NULL DROP TABLE ...",
+      "rewrite": null
+    },
+    {
+      "rule_id": "EX003",
+      "construct": "case_expression",
+      "severity": "auto",
+      "line": 25,
+      "message": "CASE and IIF translate directly (IIF becomes IF).",
+      "snippet": "SELECT m.site_id, m.product_id, SUM(CASE WHEN m.movement_type = 'RECEIPT' THEN m.quantity ELSE 0 ...",
+      "rewrite": null
+    },
+    {
+      "rule_id": "ST001",
+      "construct": "temp_table",
+      "severity": "auto",
+      "line": 25,
+      "message": "#movements is populated once and read once; it is inlined as a CTE.",
+      "snippet": "SELECT m.site_id, m.product_id, SUM(CASE WHEN m.movement_type = 'RECEIPT' THEN m.quantity ELSE 0 ...",
+      "rewrite": "transient_table_to_cte"
+    },
+    {
+      "rule_id": "EX007",
+      "construct": "current_time",
+      "severity": "auto_with_note",
+      "line": 40,
+      "message": "Current time: SQL Server returns the server's local time; Databricks returns the session time zone (UTC unless configured).",
+      "snippet": "INSERT INTO dbo.inventory_snapshots ( snapshot_month, site_id, product_id, opening_qty, received_...",
+      "rewrite": null
+    },
+    {
+      "rule_id": "EX009",
+      "construct": "isnull",
+      "severity": "auto_with_note",
+      "line": 40,
+      "message": "ISNULL becomes COALESCE. ISNULL returns the type of its first argument (and can truncate the fallback value); COALESCE uses type precedence.",
+      "snippet": "INSERT INTO dbo.inventory_snapshots ( snapshot_month, site_id, product_id, opening_qty, received_...",
+      "rewrite": null
+    },
+    {
+      "rule_id": "DM002",
+      "construct": "update_with_join",
+      "severity": "auto_with_note",
+      "line": 66,
+      "message": "Delta UPDATE/DELETE has no FROM/JOIN clause; rewritten as MERGE INTO with the join as the source. If the join matches a target row more than once, SQL Server picks one silently but Delta MERGE fails.",
+      "snippet": "WITH trend AS ( SELECT site_id, product_id, snapshot_month, AVG(dispensed_qty) OVER ( PARTITION B...",
+      "rewrite": "update_from_to_merge"
+    },
+    {
+      "rule_id": "EX001",
+      "construct": "cte",
+      "severity": "auto",
+      "line": 66,
+      "message": "CTEs are supported natively.",
+      "snippet": "WITH trend AS ( SELECT site_id, product_id, snapshot_month, AVG(dispensed_qty) OVER ( PARTITION B...",
+      "rewrite": null
+    },
+    {
+      "rule_id": "EX002",
+      "construct": "window_function",
+      "severity": "auto",
+      "line": 66,
+      "message": "Window functions and frames translate directly.",
+      "snippet": "WITH trend AS ( SELECT site_id, product_id, snapshot_month, AVG(dispensed_qty) OVER ( PARTITION B...",
+      "rewrite": null
+    },
+    {
+      "rule_id": "EX004",
+      "construct": "date_function",
+      "severity": "auto",
+      "line": 66,
+      "message": "Date functions map to Databricks equivalents (DATEADD, LAST_DAY, MAKE_DATE, ...).",
+      "snippet": "WITH trend AS ( SELECT site_id, product_id, snapshot_month, AVG(dispensed_qty) OVER ( PARTITION B...",
+      "rewrite": null
+    }
+  ],
+  "steps": [
+    {
+      "number": 1,
+      "kind": "write",
+      "title": "delete dbo.inventory_snapshots",
+      "line": 37,
+      "rewrites": [],
+      "reasons": [],
+      "source_sql": null
+    },
+    {
+      "number": 2,
+      "kind": "write",
+      "title": "insert dbo.inventory_snapshots",
+      "line": 40,
+      "rewrites": [
+        "transient_table_to_cte"
+      ],
+      "reasons": [],
+      "source_sql": null
+    },
+    {
+      "number": 3,
+      "kind": "write",
+      "title": "update dbo.inventory_snapshots",
+      "line": 66,
+      "rewrites": [
+        "update_from_to_merge"
+      ],
+      "reasons": [],
+      "source_sql": null
+    }
+  ],
+  "dropped": [
+    {
+      "line": 15,
+      "reason": "session option with no Databricks equivalent"
+    },
+    {
+      "line": 21,
+      "reason": "temp table cleanup is not needed (CTEs/views are scoped to the run)"
+    }
+  ],
+  "outputs": [
+    "dbt/models/usp_build_monthly_inventory_snapshot/inventory_snapshots.sql",
+    "notebooks/usp_build_monthly_inventory_snapshot.py"
+  ]
+}

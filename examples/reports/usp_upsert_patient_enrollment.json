@@ -1,0 +1,162 @@
+{
+  "procedure": "dbo.usp_upsert_patient_enrollment",
+  "name": "usp_upsert_patient_enrollment",
+  "source_file": "samples/tsql/03_usp_upsert_patient_enrollment.sql",
+  "parameters": [
+    {
+      "name": "@load_batch_id",
+      "type": "INT",
+      "default": null,
+      "output": false
+    }
+  ],
+  "verdict": "auto_with_note",
+  "conversion": "full",
+  "counts": {
+    "auto": 5,
+    "auto_with_note": 7,
+    "needs_review": 0
+  },
+  "manual_steps": 0,
+  "ddl_loaded": true,
+  "rewrites_applied": [
+    "bit_to_boolean",
+    "compact_date_literal",
+    "try_convert_safe_parse"
+  ],
+  "findings": [
+    {
+      "rule_id": "ST004",
+      "construct": "parameters",
+      "severity": "auto",
+      "line": 10,
+      "message": "1 input parameter(s) become dbt vars and notebook widgets.",
+      "snippet": "@load_batch_id",
+      "rewrite": null
+    },
+    {
+      "rule_id": "ST006",
+      "construct": "session_option",
+      "severity": "auto",
+      "line": 14,
+      "message": "SET NOCOUNT is a SQL Server session setting with no Databricks equivalent; dropped.",
+      "snippet": "SET NOCOUNT ON",
+      "rewrite": null
+    },
+    {
+      "rule_id": "DM001",
+      "construct": "merge",
+      "severity": "auto_with_note",
+      "line": 16,
+      "message": "Maps to Delta MERGE INTO. Like SQL Server, Delta fails when several source rows match one target row, so source de-duplication must be preserved.",
+      "snippet": "MERGE dbo.dim_patient_enrollment AS tgt USING ( SELECT patient_id, program_code, enrollment_statu...",
+      "rewrite": null
+    },
+    {
+      "rule_id": "EX002",
+      "construct": "window_function",
+      "severity": "auto",
+      "line": 16,
+      "message": "Window functions and frames translate directly.",
+      "snippet": "MERGE dbo.dim_patient_enrollment AS tgt USING ( SELECT patient_id, program_code, enrollment_statu...",
+      "rewrite": null
+    },
+    {
+      "rule_id": "EX003",
+      "construct": "case_expression",
+      "severity": "auto",
+      "line": 16,
+      "message": "CASE and IIF translate directly (IIF becomes IF).",
+      "snippet": "MERGE dbo.dim_patient_enrollment AS tgt USING ( SELECT patient_id, program_code, enrollment_statu...",
+      "rewrite": null
+    },
+    {
+      "rule_id": "EX007",
+      "construct": "current_time",
+      "severity": "auto_with_note",
+      "line": 16,
+      "message": "Current time: SQL Server returns the server's local time; Databricks returns the session time zone (UTC unless configured).",
+      "snippet": "MERGE dbo.dim_patient_enrollment AS tgt USING ( SELECT patient_id, program_code, enrollment_statu...",
+      "rewrite": null
+    },
+    {
+      "rule_id": "EX009",
+      "construct": "isnull",
+      "severity": "auto_with_note",
+      "line": 16,
+      "message": "ISNULL becomes COALESCE. ISNULL returns the type of its first argument (and can truncate the fallback value); COALESCE uses type precedence.",
+      "snippet": "MERGE dbo.dim_patient_enrollment AS tgt USING ( SELECT patient_id, program_code, enrollment_statu...",
+      "rewrite": null
+    },
+    {
+      "rule_id": "EX011",
+      "construct": "string_function",
+      "severity": "auto",
+      "line": 16,
+      "message": "String functions map directly (CHARINDEX becomes LOCATE, LTRIM/RTRIM stay).",
+      "snippet": "MERGE dbo.dim_patient_enrollment AS tgt USING ( SELECT patient_id, program_code, enrollment_statu...",
+      "rewrite": null
+    },
+    {
+      "rule_id": "EX015",
+      "construct": "bit_column",
+      "severity": "auto_with_note",
+      "line": 16,
+      "message": "BIT column compared with or assigned 0/1. On Databricks BIT is BOOLEAN and ANSI mode rejects BOOLEAN = INT; rewritten to TRUE/FALSE and CAST(... AS BOOLEAN).",
+      "snippet": "MERGE dbo.dim_patient_enrollment AS tgt USING ( SELECT patient_id, program_code, enrollment_statu...",
+      "rewrite": "bit_to_boolean"
+    },
+    {
+      "rule_id": "EX016",
+      "construct": "compact_date_literal",
+      "severity": "auto_with_note",
+      "line": 16,
+      "message": "Compact date string such as '19000101' compared with a date. SQL Server converts it implicitly; Spark fails at run time (CAST_INVALID_INPUT). Rewritten to a DATE literal.",
+      "snippet": "MERGE dbo.dim_patient_enrollment AS tgt USING ( SELECT patient_id, program_code, enrollment_statu...",
+      "rewrite": "compact_date_literal"
+    },
+    {
+      "rule_id": "EX008",
+      "construct": "convert",
+      "severity": "auto_with_note",
+      "line": 31,
+      "message": "CONVERT style code is mapped to a Databricks format pattern; verify the output format on sample data.",
+      "snippet": "MERGE dbo.dim_patient_enrollment AS tgt USING ( SELECT patient_id, program_code, enrollment_statu...",
+      "rewrite": null
+    },
+    {
+      "rule_id": "EX008",
+      "construct": "convert",
+      "severity": "auto_with_note",
+      "line": 32,
+      "message": "TRY_CONVERT with a style code: sqlglot emits TO_DATE/TO_TIMESTAMP, which raises on bad input under ANSI mode instead of returning NULL; rewritten to the TRY_ variant.",
+      "snippet": "MERGE dbo.dim_patient_enrollment AS tgt USING ( SELECT patient_id, program_code, enrollment_statu...",
+      "rewrite": "try_convert_safe_parse"
+    }
+  ],
+  "steps": [
+    {
+      "number": 1,
+      "kind": "write",
+      "title": "merge dbo.dim_patient_enrollment",
+      "line": 16,
+      "rewrites": [
+        "bit_to_boolean",
+        "compact_date_literal",
+        "try_convert_safe_parse"
+      ],
+      "reasons": [],
+      "source_sql": null
+    }
+  ],
+  "dropped": [
+    {
+      "line": 14,
+      "reason": "session option with no Databricks equivalent"
+    }
+  ],
+  "outputs": [
+    "dbt/models/usp_upsert_patient_enrollment/dim_patient_enrollment.sql",
+    "notebooks/usp_upsert_patient_enrollment.py"
+  ]
+}
