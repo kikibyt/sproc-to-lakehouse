@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import sys
 from collections.abc import Sequence
 from pathlib import Path
@@ -27,6 +28,7 @@ from sproc_to_lakehouse.reports import procedure_report, summary_report, write_r
 from sproc_to_lakehouse.reports.markdown import SEVERITY_LABEL
 
 EXIT_OK, EXIT_ERROR, EXIT_THRESHOLD = 0, 1, 2
+PASSWORD_ENV = "SPROC2LH_MSSQL_PASSWORD"
 
 
 class CliError(Exception):
@@ -64,14 +66,14 @@ def _catalog(args: argparse.Namespace, out) -> Catalog | None:
     return catalog
 
 
-def _plans(files: list[Path], catalog: Catalog | None) -> list[Plan]:
+def _plans(files: list[Path], catalog: Catalog | None, *, fixes: bool = True) -> list[Plan]:
     plans = []
     for path in files:
         try:
             procedures = parse_file(path)
         except (ProcedureParseError, LexError) as exc:
             raise CliError(f"{path}: {exc}") from exc
-        plans.extend(build_plan(analyze(p, catalog), catalog) for p in procedures)
+        plans.extend(build_plan(analyze(p, catalog), catalog, fixes=fixes) for p in procedures)
     if not plans:
         raise CliError("no CREATE PROCEDURE statements found")
     return plans
@@ -143,6 +145,64 @@ def cmd_analyze(args: argparse.Namespace, out) -> int:
     return _threshold_exit(args, [p.analysis.verdict for p in plans])
 
 
+def cmd_parity(args: argparse.Namespace, out) -> int:
+    from sproc_to_lakehouse.parity.datagen import generate, load_spec
+    from sproc_to_lakehouse.parity.report import write_report
+    from sproc_to_lakehouse.parity.runner import load_scenarios, run_all
+    from sproc_to_lakehouse.parity.spark import SparkEngine, spark_session
+    from sproc_to_lakehouse.parity.sqlserver import SqlServerConfig, SqlServerEngine
+
+    files = _sql_files(args.source)
+    catalog = _catalog(args, out)
+    if catalog is None:
+        raise CliError("parity testing needs the table DDL (--ddl)")
+    ddl_files = _sql_files(args.ddl) if args.ddl else _sql_files([_guess_ddl(args)])
+    plans = {p.name: p for p in _plans(files, catalog, fixes=not args.without_fixes)}
+    spec = load_spec(args.data)
+    data = generate(spec, catalog)
+    scenarios = load_scenarios(args.scenarios)
+    password = args.mssql_password or os.environ.get(PASSWORD_ENV, "")
+    if not password:
+        raise CliError(f"give --mssql-password or set {PASSWORD_ENV}")
+
+    print(
+        f"Generated {sum(map(len, data.values()))} synthetic rows in {len(data)} tables", file=out
+    )
+    sqlserver = SqlServerEngine(
+        SqlServerConfig(
+            args.mssql_host, args.mssql_port, args.mssql_user, password, args.mssql_database
+        )
+    )
+    sqlserver.setup(ddl_files, files)
+    sql_version = sqlserver.version()
+    print(f"SQL Server: {sql_version}", file=out)
+    spark = SparkEngine(spark_session(args.delta_jars))
+    spark.setup(catalog)
+    print(f"Spark: {spark.version()}", file=out)
+
+    results = run_all(scenarios, plans, data, catalog, sqlserver, spark)
+    sqlserver.close()
+    environment = {
+        "sqlserver": sql_version,
+        "spark": spark.version(),
+        "data_rows": sum(map(len, data.values())),
+        "data_tables": len(data),
+        "seed": spec.get("seed"),
+        "fixes": not args.without_fixes,
+    }
+    path = write_report(results, environment, args.out)
+    for r in results:
+        print(f"{r.procedure:<40} {r.status:<9} {r.reason or ''}", file=out)
+    print(f"Report: {path}", file=out)
+    failed = any(r.status in ("mismatch", "error") for r in results)
+    return EXIT_THRESHOLD if failed else EXIT_OK
+
+
+def _guess_ddl(args: argparse.Namespace) -> Path:
+    first = args.source[0]
+    return (first if first.is_dir() else first.parent).parent / "ddl"
+
+
 def _print_table(reports: list[dict], out) -> None:
     width = max(len(r["name"]) for r in reports)
     print(f"{'procedure':<{width}}  verdict  conversion  auto  note  review", file=out)
@@ -186,6 +246,26 @@ def build_parser() -> argparse.ArgumentParser:
     convert.add_argument("--target", choices=["dbt", "notebook", "both"], default="both")
     convert.add_argument("--out", type=Path, default=Path("output"), help="output folder")
     convert.set_defaults(func=cmd_convert)
+
+    parity = sub.add_parser(
+        "parity", help="run original T-SQL (SQL Server) and generated code (Spark) and compare"
+    )
+    common(parity)
+    parity.add_argument("--data", type=Path, required=True, help="synthetic data spec (YAML)")
+    parity.add_argument("--scenarios", type=Path, required=True, help="parity scenarios (YAML)")
+    parity.add_argument("--out", type=Path, default=Path("output/parity"))
+    parity.add_argument("--mssql-host", default="localhost")
+    parity.add_argument("--mssql-port", type=int, default=1433)
+    parity.add_argument("--mssql-user", default="sa")
+    parity.add_argument("--mssql-password", help=f"or set {PASSWORD_ENV}")
+    parity.add_argument("--mssql-database", default="sproc_parity")
+    parity.add_argument("--delta-jars", nargs="+", help="local Delta Lake jars (else from Maven)")
+    parity.add_argument(
+        "--without-fixes",
+        action="store_true",
+        help="ablation: turn off the targeted rewrites to measure what they are worth",
+    )
+    parity.set_defaults(func=cmd_parity)
 
     analyze_cmd = sub.add_parser("analyze", help="classify constructs without generating code")
     common(analyze_cmd)

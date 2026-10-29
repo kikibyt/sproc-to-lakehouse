@@ -98,7 +98,8 @@ def truncate(r: Rule, procedure: Procedure) -> Iterator[Finding]:
         if stmt.kind is K.TRUNCATE:
             yield r.finding(
                 Severity.AUTO,
-                "Full reload: becomes a table materialization (dbt) / overwrite mode (notebook).",
+                "Full reload: becomes a table materialization (dbt) and DELETE FROM before "
+                "the INSERT (notebook; open-source Delta has no TRUNCATE).",
                 stmt.line,
                 snippet(stmt.sql),
             )

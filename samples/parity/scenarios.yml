@@ -1,0 +1,46 @@
+# Parity scenarios: run each procedure on SQL Server (original T-SQL) and on Spark +
+# Delta Lake (generated code) against the same synthetic data, then compare.
+#
+# params:          passed as strings, exactly as a notebook widget / dbt var would be.
+# ignore_columns:  columns set from the current time (GETDATE / SYSDATETIME); the two
+#                  engines run seconds apart, so these are excluded from the comparison
+#                  and listed in the report.
+# compare:         tables to compare after the run (default: every table the procedure
+#                  writes). Procedures that return a result set have it compared too.
+
+scenarios:
+  - procedure: usp_load_daily_dispense_summary
+    params: {run_date: "2024-03-15"}
+    ignore_columns: {dbo.daily_dispense_summary: [loaded_at]}
+
+  - procedure: usp_build_monthly_inventory_snapshot
+    params: {snapshot_month: "2024-03-01"}
+    ignore_columns: {dbo.inventory_snapshots: [loaded_at]}
+
+  - procedure: usp_upsert_patient_enrollment
+    params: {load_batch_id: "1"}
+    ignore_columns: {dbo.dim_patient_enrollment: [created_at, updated_at]}
+
+  - procedure: usp_calc_refill_gaps
+    params: {as_of_date: "2024-03-31", gap_threshold_days: "7"}
+    ignore_columns: {dbo.refill_gap_events: [calculated_at]}
+
+  - procedure: usp_classify_payer_claims
+    params: {from_date: "2024-03-01", to_date: "2024-03-31"}
+    ignore_columns: {dbo.claim_classification: [classified_at]}
+
+  - procedure: usp_shipment_sla_report
+    params: {week_start: "2024-03-04"}
+
+  # Partly converted procedures are listed so the report states why they were not run.
+  - procedure: usp_standardize_patient_contact
+  - procedure: usp_update_shipment_status
+    params: {as_of: "2024-03-12 18:00:00"}
+  - procedure: usp_rebuild_prescriber_rollup
+    params: {period_month: "2024-03-01"}
+  - procedure: usp_recalc_reorder_points_cursor
+    params: {as_of_date: "2024-03-31"}
+  - procedure: usp_export_dispenses_by_region_dynamic
+    params: {from_date: "2024-03-01", to_date: "2024-03-31"}
+  - procedure: usp_close_month_end
+    params: {period_month: "2024-03-01"}

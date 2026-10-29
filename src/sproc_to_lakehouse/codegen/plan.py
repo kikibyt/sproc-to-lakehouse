@@ -146,8 +146,11 @@ def _transient_name(ref: TableRef) -> str:
 
 
 class PlanBuilder:
-    def __init__(self, analysis: ProcedureAnalysis, catalog: Catalog | None = None) -> None:
+    def __init__(
+        self, analysis: ProcedureAnalysis, catalog: Catalog | None = None, *, fixes: bool = True
+    ) -> None:
         self.analysis = analysis
+        self.fixes = fixes
         self.procedure = analysis.procedure
         self.resolver = (
             TypeResolver(catalog, transient_schemas(self.procedure.statements()))
@@ -423,8 +426,8 @@ class PlanBuilder:
         if isinstance(prepared, Unresolved):
             self._manual(stmt, [prepared.reason])
             return
-        rewrites = _expression_rewrites_used(stmt.expression)
-        if needs_merge_rewrite(stmt.expression):
+        rewrites = _expression_rewrites_used(stmt.expression) if self.fixes else set()
+        if self.fixes and needs_merge_rewrite(stmt.expression):
             try:
                 prepared = update_from_to_merge(prepared)
             except RewriteError as exc:
@@ -438,6 +441,10 @@ class PlanBuilder:
             K.DELETE: "delete", K.MERGE: "merge", K.TRUNCATE: "truncate",
         }[stmt.kind]  # fmt: skip
         target = stmt.writes[0]
+        if self.fixes and stmt.kind is K.TRUNCATE:
+            # Open-source Delta Lake rejects TRUNCATE TABLE; DELETE without a predicate
+            # empties the table the same way on every Delta runtime.
+            prepared = exp.Delete(this=stmt.expression.expressions[0].copy())
         rewrites |= self._transient_rewrites(stmt)
         self.steps.append(
             Step(
@@ -457,7 +464,9 @@ class PlanBuilder:
         if isinstance(prepared, Unresolved):
             self._manual(stmt, [prepared.reason])
             return
-        rewrites = _expression_rewrites_used(stmt.expression) | self._transient_rewrites(stmt)
+        rewrites = self._transient_rewrites(stmt)
+        if self.fixes:
+            rewrites |= _expression_rewrites_used(stmt.expression)
         prepared, typed = self._typed_rewrites(prepared)
         rewrites |= typed
         self.steps.append(
@@ -477,7 +486,7 @@ class PlanBuilder:
     def _typed_rewrites(self, expression: exp.Expression) -> tuple[exp.Expression, set[str]]:
         """Apply the DDL-dependent rewrites (no-ops without a catalog)."""
         used: set[str] = set()
-        if self.resolver is None:
+        if self.resolver is None or not self.fixes:
             return expression, used
         for name, rewrite in (
             (rw.BIT_TO_BOOLEAN, bit_to_boolean),
@@ -497,7 +506,7 @@ class PlanBuilder:
                 f"uses a variable that cannot be resolved: {resolved.reason}", stmt.line
             )
         resolved = self._fold_transients(resolved)
-        return apply_expression_rewrites(resolved)
+        return apply_expression_rewrites(resolved) if self.fixes else resolved
 
     def _fold_transients(self, expression: exp.Expression) -> exp.Expression:
         used: list[Transient] = []
@@ -614,5 +623,9 @@ def _merge_manual(steps: list[Step]) -> list[Step]:
     return merged
 
 
-def build_plan(analysis: ProcedureAnalysis, catalog: Catalog | None = None) -> Plan:
-    return PlanBuilder(analysis, catalog).build()
+def build_plan(
+    analysis: ProcedureAnalysis, catalog: Catalog | None = None, *, fixes: bool = True
+) -> Plan:
+    """Build the conversion plan. ``fixes=False`` turns off the targeted rewrites (plain
+    sqlglot output, same pipeline); it exists to measure what the fixes are worth."""
+    return PlanBuilder(analysis, catalog, fixes=fixes).build()

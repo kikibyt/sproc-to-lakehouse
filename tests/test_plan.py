@@ -117,3 +117,18 @@ def test_mutated_temp_table_is_manual(plan_for):
         "SELECT * FROM #p"
     )
     assert {s.kind for s in plan.steps} == {M}
+
+
+def test_fixes_can_be_switched_off_for_the_ablation(catalog):
+    from sproc_to_lakehouse.analyzer import analyze
+    from sproc_to_lakehouse.codegen.plan import build_plan
+    from sproc_to_lakehouse.parser import parse_file
+
+    from .conftest import SAMPLES_DIR
+
+    (proc,) = parse_file(SAMPLES_DIR / "tsql" / "02_usp_build_monthly_inventory_snapshot.sql")
+    plan = build_plan(analyze(proc, catalog), catalog, fixes=False)
+    update = plan.steps[-1]
+    assert update.sql.sql(dialect="tsql").startswith("WITH trend AS")
+    assert "MERGE" not in dbx(update) and "UPDATE s SET" in dbx(update)
+    assert plan.rewrites_used() == {"transient_table_to_cte"}  # structural, always on

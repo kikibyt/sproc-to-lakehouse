@@ -18,6 +18,7 @@ class Column:
     name: str
     data_type: str  # as written in T-SQL, e.g. DECIMAL(12,2)
     nullable: bool
+    identity: bool = False  # IDENTITY(seed, increment)
 
     @property
     def databricks_type(self) -> str:
@@ -86,8 +87,12 @@ def column_from_def(item: exp.ColumnDef) -> Column:
         isinstance(c, exp.NotNullColumnConstraint) and not c.args.get("allow_null")
         for c in constraints
     )
+    identity = any(isinstance(c, exp.GeneratedAsIdentityColumnConstraint) for c in constraints)
     return Column(
-        item.name.lower(), item.args["kind"].sql(dialect="tsql"), nullable=not (not_null or is_pk)
+        item.name.lower(),
+        item.args["kind"].sql(dialect="tsql"),
+        nullable=not (not_null or is_pk),
+        identity=identity,
     )
 
 

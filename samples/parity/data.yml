@@ -1,0 +1,261 @@
+# Synthetic data for parity testing (fictional specialty pharmacy).
+#
+# Every value is generated from the seed below: running the generator twice gives the
+# same rows. Names, codes and identifiers are invented; e-mail addresses use the
+# reserved example.test domain. The data deliberately includes messy and edge-case
+# values (invalid date strings, stray spaces, NULLs, duplicate staging rows, rejected
+# claims) so the procedures' business rules are actually exercised.
+#
+# Column generators: seq, template ({n} = row number, {d3}/{d4}/{d5} = random digits),
+# choice (+ weights), int, decimal, date, datetime, date_text, bool, fk (+ limit),
+# const, lookup (copy a value from the referenced parent row), null (probability,
+# combinable with any generator), mix (weighted alternatives).
+# Columns not listed get a type-based default (NULL when nullable).
+
+seed: 20240315
+
+tables:
+  dbo.sites:
+    rows: 6
+    columns:
+      site_id: {seq: 1}
+      site_name: {template: "Site {n:02d}"}
+      region_code: {choice: [NORTH, SOUTH, EAST, WEST]}
+      state_code: {choice: [NY, TX, CA, IL, GA, WA]}
+      is_active: {bool: 0.85}
+
+  dbo.products:
+    rows: 12
+    columns:
+      product_id: {seq: 1}
+      product_code: {template: "PRD-{n:04d}"}
+      product_name: {template: "Product {n:02d} 50mg"}
+      therapy_area: {choice: [THERAPY_AREA_1, THERAPY_AREA_2, THERAPY_AREA_3, THERAPY_AREA_4]}
+      unit_cost: {decimal: [50, 5000]}
+      lead_time_days: {int: [2, 14]}
+      is_cold_chain: {bool: 0.3}
+      is_active: {bool: 0.9}
+
+  dbo.payers:
+    rows: 8
+    columns:
+      payer_id: {seq: 1}
+      payer_name: {template: "Payer {n:03d}"}
+      payer_type:
+        choice: [COMMERCIAL, GOVERNMENT, MANUFACTURER_ASSIST, CASH]
+        weights: [5, 3, 1, 1]
+
+  dbo.prescribers:
+    rows: 25
+    columns:
+      prescriber_id: {seq: 1}
+      prescriber_name: {template: "Prescriber {n:04d}"}
+      specialty: {choice: [ONCOLOGY, RHEUMATOLOGY, NEUROLOGY, GASTROENTEROLOGY]}
+      state_code: {choice: [NY, TX, CA, IL, GA, WA]}
+      region_code: {choice: [NORTH, SOUTH, EAST, WEST]}
+
+  dbo.patients:
+    rows: 60
+    columns:
+      patient_id: {template: "PT{n:06d}"}
+      first_name:
+        mix:
+          - {weight: 6, const: patient}
+          - {weight: 2, const: "  Patient"}
+          - {weight: 1, const: "PATIENT  "}
+          - {weight: 1, const: null}
+      last_name: {template: "{n:04d}"}
+      date_of_birth: {date: ["1940-01-01", "2005-12-31"]}
+      phone_raw:
+        mix:
+          - {weight: 4, template: "({d3}) {d3}-{d4}"}
+          - {weight: 2, template: "{d3}.{d3}.{d4}"}
+          - {weight: 2, template: "{d3}{d3}{d4}"}
+          - {weight: 1, template: "{d3}-{d4}"}
+          - {weight: 1, const: null}
+      email_raw:
+        mix:
+          - {weight: 5, template: "patient{n}@example.test"}
+          - {weight: 2, template: "  PATIENT{n}@Example.Test "}
+          - {weight: 1, template: "patient{n}.example.test"}
+          - {weight: 2, const: null}
+      postal_code:
+        mix:
+          - {weight: 5, template: "{d5}"}
+          - {weight: 2, template: "{d5}-{d4}"}
+          - {weight: 1, template: " {d5} "}
+          - {weight: 1, template: "{d3}"}
+          - {weight: 1, const: null}
+      state_code: {choice: [ny, TX, ca, IL, ga, WA]}
+      created_at: {datetime: ["2022-01-01 00:00:00", "2024-03-01 00:00:00"]}
+
+  dbo.dispenses:
+    rows: 1500
+    columns:
+      dispense_id: {seq: 100001}
+      patient_id: {fk: dbo.patients.patient_id}
+      prescriber_id: {fk: dbo.prescribers.prescriber_id}
+      # Few products per patient, so patients get repeat fills (refill-gap logic).
+      product_id: {fk: dbo.products.product_id, limit: 4}
+      payer_id: {fk: dbo.payers.payer_id}
+      site_id: {fk: dbo.sites.site_id}
+      dispense_date: {date: ["2023-12-01", "2024-03-31"]}
+      quantity: {int: [1, 120]}
+      days_supply: {choice: [7, 14, 28, 30, 90], weights: [1, 2, 4, 4, 1]}
+      fill_number: {int: [1, 12]}
+      billed_amount: {decimal: [100, 9000]}
+      paid_amount: {decimal: [0, 9000]}
+      copay_amount: {decimal: [0, 300]}
+      status: {choice: [DISPENSED, REVERSED, CANCELLED], weights: [17, 2, 1]}
+      is_period_locked: {const: false}
+
+  dbo.inventory_movements:
+    rows: 300
+    columns:
+      movement_id: {seq: 1}
+      site_id: {fk: dbo.sites.site_id}
+      product_id: {fk: dbo.products.product_id}
+      movement_date: {date: ["2024-01-01", "2024-03-31"]}
+      movement_type: {choice: [RECEIPT, DISPENSE, ADJUSTMENT, RETURN], weights: [3, 5, 1, 1]}
+      quantity: {decimal: [-20, 200]}
+
+  dbo.stg_patient_enrollments:
+    rows: 80
+    columns:
+      stg_row_id: {seq: 1}
+      load_batch_id: {choice: [1, 2], weights: [3, 1]}
+      patient_id: {fk: dbo.patients.patient_id, limit: 40}
+      program_code:
+        mix:
+          - {weight: 5, choice: [PRG_A, PRG_B, PRG_C]}
+          - {weight: 2, choice: ["  prg_a", "PRG_B  ", prg_c]}
+          - {weight: 1, const: null}
+      enrollment_status:
+        mix:
+          - {weight: 6, choice: [ACTIVE, PENDING, DISENROLLED]}
+          - {weight: 2, choice: ["active ", " disenrolled"]}
+          - {weight: 1, const: ""}
+          - {weight: 1, const: null}
+      enrolled_on:
+        date_text: {range: ["2022-01-01", "2024-02-28"], formats: ["%m/%d/%Y"]}
+      disenrolled_on:
+        mix:
+          - {weight: 6, const: null}
+          - {weight: 3, date_text: {range: ["2023-01-01", "2024-03-01"], formats: ["%m/%d/%Y"]}}
+          - {weight: 1, choice: ["13/45/2024", "N/A", "02/30/2024"]}
+      payer_id: {fk: dbo.payers.payer_id, null: 0.15}
+      case_manager_email: {template: " CM{n}@Example.Test"}
+      loaded_at: {datetime: ["2024-03-01 00:00:00", "2024-03-10 00:00:00"]}
+
+  dbo.dim_patient_enrollment:
+    rows: 40
+    unique: [[patient_id, program_code]]
+    columns:
+      patient_id: {fk: dbo.patients.patient_id, limit: 40}
+      program_code: {choice: [PRG_A, PRG_B, PRG_C]}
+      enrollment_status: {choice: [ACTIVE, PENDING, DISENROLLED]}
+      enrolled_date: {date: ["2022-01-01", "2024-02-28"]}
+      disenrolled_date: {date: ["2023-01-01", "2024-03-01"], null: 0.7}
+      payer_id: {fk: dbo.payers.payer_id}
+      case_manager_email: {template: "cm{n}@example.test"}
+      is_active: {bool: 0.7}
+      created_at: {datetime: ["2023-01-01 00:00:00", "2023-12-31 00:00:00"]}
+      updated_at: {datetime: ["2024-01-01 00:00:00", "2024-02-28 00:00:00"]}
+
+  dbo.shipments:
+    rows: 200
+    columns:
+      shipment_id: {seq: 500001}
+      dispense_id: {fk: dbo.dispenses.dispense_id}
+      site_id: {fk: dbo.sites.site_id}
+      carrier_code: {choice: [CARRIER_A, CARRIER_B, CARRIER_C]}
+      ship_method: {choice: [OVERNIGHT, TWO_DAY, GROUND]}
+      shipped_at: {datetime: ["2024-03-01 00:00:00", "2024-03-15 00:00:00"]}
+      promised_delivery_date: {date: ["2024-03-02", "2024-03-16"]}
+      delivered_at: {datetime: ["2024-03-02 00:00:00", "2024-03-20 00:00:00"], null: 0.3}
+      status: {choice: [SHIPPED, IN_TRANSIT, DELIVERED, DELAYED]}
+      requires_cold_chain: {bool: 0.3}
+      last_status_update: {datetime: ["2024-03-01 00:00:00", "2024-03-20 00:00:00"]}
+
+  dbo.carrier_tracking_events:
+    rows: 500
+    columns:
+      event_id: {seq: 1}
+      shipment_id: {fk: dbo.shipments.shipment_id}
+      event_code: {choice: [PU, IT, OD, DL, EX], weights: [3, 4, 2, 3, 1]}
+      event_ts: {datetime: ["2024-03-01 00:00:00", "2024-03-20 00:00:00"]}
+      location_state: {choice: [NY, TX, CA, IL, GA, WA], null: 0.1}
+
+  dbo.claims:
+    rows: 600
+    columns:
+      claim_id: {seq: 900001}
+      dispense_id: {fk: dbo.dispenses.dispense_id}
+      payer_id: {fk: dbo.payers.payer_id}
+      plan_type: {choice: [STANDARD, HDHP, PART_D, MANAGED_GOV]}
+      submitted_at: {datetime: ["2024-02-20 00:00:00", "2024-04-05 00:00:00"]}
+      response_code: {choice: [P, R, D], weights: [6, 3, 1]}
+      reject_code:
+        mix:
+          - {weight: 5, const: null}
+          - {weight: 5, choice: ["70", "75", "76", "79", "88", "99"]}
+      billed_amount: {decimal: [50, 9000]}
+      paid_amount: {decimal: [0, 9000]}
+      patient_pay_amount: {decimal: [0, 400]}
+
+  # Existing target rows, so DELETE / MERGE / replace logic has something to act on.
+  dbo.daily_dispense_summary:
+    cartesian:
+      summary_date: ["2024-03-14", "2024-03-15"]
+      therapy_area: [THERAPY_AREA_1, THERAPY_AREA_2]
+    columns:
+      summary_date_key: {const: "19000101"}
+      dispense_count: {int: [1, 50]}
+      patient_count: {int: [1, 50]}
+      total_quantity: {decimal: [1, 500]}
+      total_days_supply: {int: [7, 900]}
+      total_billed: {decimal: [100, 50000]}
+      total_paid: {decimal: [100, 50000]}
+      paid_to_billed_pct: {decimal: [10, 99]}
+      loaded_at: {datetime: ["2024-03-15 00:00:00", "2024-03-16 00:00:00"]}
+
+  dbo.inventory_snapshots:
+    cartesian:
+      snapshot_month: ["2023-12-31", "2024-01-31", "2024-02-29"]
+      site_id: {fk: dbo.sites.site_id}
+      product_id: {fk: dbo.products.product_id}
+    columns:
+      opening_qty: {decimal: [0, 500]}
+      received_qty: {decimal: [0, 300]}
+      dispensed_qty: {decimal: [0, 300]}
+      adjusted_qty: {decimal: [-20, 20]}
+      closing_qty: {decimal: [0, 500]}
+      avg_dispensed_3m: {const: null}
+      loaded_at: {datetime: ["2024-01-01 00:00:00", "2024-03-01 00:00:00"]}
+
+  dbo.claim_classification:
+    rows: 20
+    columns:
+      claim_id: {fk: dbo.claims.claim_id, unique: true}
+      dispense_id: {lookup: {by: claim_id, from: dbo.claims.claim_id, take: dispense_id}}
+      submitted_date: {lookup: {by: claim_id, from: dbo.claims.claim_id, take: submitted_at, as: date}}
+      payer_type: {const: OLD}
+      coverage_segment: {const: OLD}
+      claim_outcome: {const: OLD}
+      copay_tier: {const: OLD}
+      follow_up_priority: {const: OLD}
+      high_oop_flag: {const: false}
+      classified_at: {datetime: ["2024-03-01 00:00:00", "2024-03-02 00:00:00"]}
+
+  dbo.refill_gap_events:
+    rows: 5
+    columns:
+      patient_id: {fk: dbo.patients.patient_id}
+      product_id: {fk: dbo.products.product_id}
+      fill_seq: {seq: 1}
+      dispense_date: {date: ["2024-01-01", "2024-01-31"]}
+      supply_end_date: {date: ["2024-02-01", "2024-02-28"]}
+      gap_days: {int: [1, 30]}
+      gap_category: {const: STALE}
+      is_open_gap: {const: false}
+      calculated_at: {datetime: ["2024-02-01 00:00:00", "2024-02-02 00:00:00"]}

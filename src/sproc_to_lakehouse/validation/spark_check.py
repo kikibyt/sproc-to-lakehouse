@@ -30,6 +30,7 @@ from sproc_to_lakehouse.codegen.plan import Plan, Step, StepKind
 from sproc_to_lakehouse.codegen.render import SqlRenderer
 from sproc_to_lakehouse.codegen.variables import ParamInfo
 
+_DELTA_ONLY = ("update", "delete", "merge", "truncate")  # need Delta Lake to execute
 SAMPLE_VALUES = {
     "DATE": "2024-01-31",
     "TIMESTAMP": "2024-01-31 18:00:00",
@@ -101,9 +102,7 @@ def check_plan(spark, plan: Plan) -> list[CheckResult]:
         try:
             result.level = _check_step(spark, step, sql, args)
         except Exception as exc:  # report Spark's message, keep checking other steps
-            result.level = (
-                "analyzed" if step.operation in ("update", "delete", "merge") else "executed"
-            )
+            result.level = "analyzed" if step.operation in _DELTA_ONLY else "executed"
             result.error = _first_line(exc)
         results.append(result)
     return results
@@ -117,7 +116,7 @@ def _check_step(spark, step: Step, sql: str, args: dict[str, Any]) -> str:
     if step.kind is StepKind.TEMP_VIEW:
         spark.sql(sql, args=args).createOrReplaceTempView(step.name)
         return "executed"
-    if step.operation in ("update", "delete", "merge"):
+    if step.operation in _DELTA_ONLY:
         analyze_dml(spark, sql, args)
         return "analyzed"
     spark.sql(sql, args=args).collect()

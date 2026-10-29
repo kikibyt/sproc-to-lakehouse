@@ -25,6 +25,12 @@ dev = [
 spark = [
     "pyspark>=4.0",
 ]
+# Optional: parity testing against SQL Server (Docker) and Spark + Delta Lake.
+parity = [
+    "pyspark>=4.0",
+    "delta-spark>=4.0",
+    "pymssql>=2.3",
+]
 
 [tool.setuptools.packages.find]
 where = ["src"]
@@ -34,6 +40,7 @@ testpaths = ["tests"]
 addopts = "-ra"
 markers = [
     "spark: needs pyspark and a Java runtime (skipped when unavailable)",
+    "parity: needs SQL Server + Spark/Delta (skipped unless SPROC2LH_MSSQL_PASSWORD is set)",
 ]
 
 [tool.ruff]

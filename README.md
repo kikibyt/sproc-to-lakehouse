@@ -2,8 +2,8 @@
 
 Migrate T-SQL stored procedures to Databricks (PySpark/dbt) with automated parity testing.
 
-> **Status: work in progress (Phase 3 of 5).** Parsing, analysis, code generation, reports and
-> the CLI work and are tested; parity testing is still to come. All sample code and data
+> **Status: work in progress (Phase 4 of 5).** Parsing, analysis, code generation, reports, the
+> CLI and parity testing work and are tested; the showcase write-up is still to come. All sample code and data
 > in this repository are **synthetic** (a fictional specialty pharmacy).
 
 ## What works today
@@ -28,7 +28,12 @@ Migrate T-SQL stored procedures to Databricks (PySpark/dbt) with automated parit
 - **Validation** (`src/sproc_to_lakehouse/validation`): optional tests run every generated
   statement through a local Apache Spark 4 session against empty tables built from the DDL
   (queries and INSERTs execute; MERGE/UPDATE/DELETE are parsed and resolved). This proves the
-  SQL is valid and resolves; it does not yet prove results match SQL Server (Phase 4).
+  SQL is valid and resolves; whether results match SQL Server is the job of parity testing.
+- **Parity testing** (`src/sproc_to_lakehouse/parity`): the original T-SQL runs on SQL Server
+  2022 (Docker) and the generated code runs on Apache Spark 4 with Delta Lake, both against
+  the same seeded synthetic data (`samples/parity/data.yml`). The tables each procedure
+  writes, and any result set it returns, are compared by row count, per-column checksum and
+  row-level diff on the primary key. Reports go to `output\parity\`.
 - **Sample corpus** (`samples/`): 12 synthetic procedures, the DDL for their tables, and a
   hand-written answer key (`expected_findings.yml`) that the tests check the analyzer against.
 
@@ -58,6 +63,22 @@ python -m sproc_to_lakehouse convert samples\tsql --target both --out output
 
 The Spark validation tests are skipped unless PySpark 4 and Java 17+ are installed
 (`pip install -e ".[dev,spark]"`); they are intended for Linux/CI.
+
+## Parity testing
+
+You need Docker, Java 17+ and the `parity` extra. On Windows, run the Spark side in WSL2
+(local Spark on plain Windows needs Hadoop's `winutils.exe` to write tables) or use CI.
+
+```powershell
+$env:SPROC2LH_MSSQL_PASSWORD = "Choose_A_Strong_Pass1!"
+docker compose up -d
+pip install -e ".[dev,parity]"
+python -m sproc_to_lakehouse parity samples\tsql --data samples\parity\data.yml --scenarios samples\parity\scenarios.yml
+```
+
+`--without-fixes` reruns with the tool's targeted rewrites switched off, to measure what
+they are worth. With `SPROC2LH_MSSQL_PASSWORD` set, `pytest` also runs the end-to-end
+parity tests, including a check that a deliberately different parameter is caught.
 
 ## Licence
 

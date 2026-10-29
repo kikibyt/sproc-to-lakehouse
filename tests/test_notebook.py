@@ -40,7 +40,7 @@ def test_parameters_become_widgets_and_named_markers(corpus_plans):
 
 def test_only_used_parameters_are_passed(corpus_plans):
     source = generate_notebook(corpus_plans["usp_calc_refill_gaps"])
-    truncate_cell = next(c for c in cells(source) if "TRUNCATE TABLE" in c)
+    truncate_cell = next(c for c in cells(source) if "DELETE FROM dbo.refill_gap_events" in c)
     assert "args={}" in truncate_cell
 
 
